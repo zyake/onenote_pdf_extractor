@@ -34,9 +34,6 @@ import java.util.concurrent.Callable;
 )
 public class OneNotePdfExtractor implements Callable<Integer> {
 
-    /** Azure AD application client ID. Override via ONENOTE_CLIENT_ID env variable. */
-    private static final String DEFAULT_CLIENT_ID = "YOUR_CLIENT_ID_HERE";
-
     @Option(names = "--section-id", description = "Direct OneNote section ID")
     private String sectionId;
 
@@ -50,14 +47,14 @@ public class OneNotePdfExtractor implements Callable<Integer> {
     private Path outputDir;
 
     public static void main(String[] args) {
-        int exitCode = new CommandLine(new OneNotePdfExtractor()).execute(args);
+        var exitCode = new CommandLine(new OneNotePdfExtractor()).execute(args);
         System.exit(exitCode);
     }
 
     @Override
     public Integer call() {
         // 1. Build and validate CLI args
-        CliArgs cliArgs = buildCliArgs();
+        var cliArgs = buildCliArgs();
         try {
             cliArgs.validate();
         } catch (IllegalArgumentException e) {
@@ -66,7 +63,7 @@ public class OneNotePdfExtractor implements Callable<Integer> {
             return 1;
         }
 
-        Path outDir = cliArgs.getOutputDir();
+        var outDir = cliArgs.getOutputDir();
 
         // 2. Create output directory if needed, validate writability
         try {
@@ -81,9 +78,10 @@ public class OneNotePdfExtractor implements Callable<Integer> {
         }
 
         // 3. Authenticate with Microsoft Graph
-        String clientId = System.getenv("ONENOTE_CLIENT_ID");
+        var clientId = System.getenv("ONENOTE_CLIENT_ID");
         if (clientId == null || clientId.isBlank()) {
-            clientId = DEFAULT_CLIENT_ID;
+            System.err.println("Error: ONENOTE_CLIENT_ID environment variable is not set.");
+            return 1;
         }
 
         AuthModule authModule;
@@ -98,8 +96,8 @@ public class OneNotePdfExtractor implements Callable<Integer> {
         }
 
         // 4. Create Graph client and resolve section
-        GraphClientWrapper graphClient = new GraphClientWrapper(authModule);
-        SectionResolver sectionResolver = new SectionResolver(graphClient);
+        var graphClient = new GraphClientWrapper(authModule);
+        var sectionResolver = new SectionResolver(graphClient);
 
         SectionInfo sectionInfo;
         try {
@@ -115,16 +113,16 @@ public class OneNotePdfExtractor implements Callable<Integer> {
         }
 
         // 5. List all pages in the section
-        PageLister pageLister = new PageLister(graphClient);
+        var pageLister = new PageLister(graphClient);
         List<PageInfo> pages;
         try {
-            pages = pageLister.listPages(sectionInfo.getSectionId());
+            pages = pageLister.listPages(sectionInfo.sectionId());
         } catch (Exception e) {
             System.err.println("Error: Failed to list pages - " + e.getMessage());
             return 1;
         }
 
-        int totalPages = pages.size();
+        var totalPages = pages.size();
         System.out.println("Found " + totalPages + " page(s) to export.");
 
         if (totalPages == 0) {
@@ -133,8 +131,8 @@ public class OneNotePdfExtractor implements Callable<Integer> {
         }
 
         // 6. Set up export components
-        PdfDownloader pdfDownloader = new PdfDownloader(graphClient);
-        PdfWriter pdfWriter = new PdfWriter(outDir);
+        var pdfDownloader = new PdfDownloader(graphClient);
+        var pdfWriter = new PdfWriter(outDir);
         ProgressReporter reporter;
         try {
             reporter = new ProgressReporter(outDir.resolve("export.log"));
@@ -144,26 +142,26 @@ public class OneNotePdfExtractor implements Callable<Integer> {
         }
 
         // 7. Export each page
-        int successCount = 0;
-        List<FailedPage> failures = new ArrayList<>();
+        var successCount = 0;
+        var failures = new ArrayList<FailedPage>();
 
         try {
-            for (int i = 0; i < totalPages; i++) {
-                PageInfo page = pages.get(i);
-                int current = i + 1;
-                String title = page.getTitle() != null ? page.getTitle() : page.getPageId();
+            for (var i = 0; i < totalPages; i++) {
+                var page = pages.get(i);
+                var current = i + 1;
+                var title = page.title() != null ? page.title() : page.pageId();
 
                 reporter.reportPageStart(current, totalPages, title);
 
                 try {
-                    byte[] pdfBytes = pdfDownloader.downloadPageAsPdf(page.getPageId());
-                    String filename = pdfWriter.writePdf(page.getTitle(), page.getPageId(), pdfBytes);
+                    var pdfBytes = pdfDownloader.downloadPageAsPdf(page.pageId());
+                    var filename = pdfWriter.writePdf(page.title(), page.pageId(), pdfBytes);
                     reporter.reportPageSuccess(current, totalPages, title, filename);
                     successCount++;
                 } catch (Exception e) {
-                    String errorMsg = e.getMessage() != null ? e.getMessage() : e.getClass().getSimpleName();
-                    reporter.reportPageFailure(current, totalPages, title, page.getPageId(), errorMsg);
-                    failures.add(new FailedPage(page.getPageId(), title, errorMsg));
+                    var errorMsg = e.getMessage() != null ? e.getMessage() : e.getClass().getSimpleName();
+                    reporter.reportPageFailure(current, totalPages, title, page.pageId(), errorMsg);
+                    failures.add(new FailedPage(page.pageId(), title, errorMsg));
                 }
             }
 
@@ -177,7 +175,7 @@ public class OneNotePdfExtractor implements Callable<Integer> {
     }
 
     private CliArgs buildCliArgs() {
-        CliArgs args = new CliArgs();
+        var args = new CliArgs();
         args.setSectionId(sectionId);
         args.setNotebookName(notebook);
         args.setSectionName(section);

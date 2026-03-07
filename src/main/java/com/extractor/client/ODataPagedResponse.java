@@ -12,30 +12,8 @@ import java.util.List;
  * @param <T> the type of items in the value array
  */
 @JsonIgnoreProperties(ignoreUnknown = true)
-public class ODataPagedResponse<T> {
-
-    @JsonProperty("value")
-    private List<T> value;
-
-    @JsonProperty("@odata.nextLink")
-    private String nextLink;
-
-    public ODataPagedResponse() {
-    }
-
-    public List<T> getValue() {
-        return value;
-    }
-
-    public void setValue(List<T> value) {
-        this.value = value;
-    }
-
-    public String getNextLink() {
-        return nextLink;
-    }
-
-    public void setNextLink(String nextLink) {
-        this.nextLink = nextLink;
-    }
+public record ODataPagedResponse<T>(
+        @JsonProperty("value") List<T> value,
+        @JsonProperty("@odata.nextLink") String nextLink
+) {
 }

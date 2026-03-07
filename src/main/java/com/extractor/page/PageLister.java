@@ -7,7 +7,6 @@ import com.extractor.model.PageInfo;
 import java.io.IOException;
 import java.time.Instant;
 import java.util.List;
-import java.util.stream.Collectors;
 
 /**
  * Retrieves all pages from a OneNote section with pagination support.
@@ -31,23 +30,23 @@ public class PageLister {
      */
     public List<PageInfo> listPages(String sectionId) {
         try {
-            String url = GRAPH_BASE + "/me/onenote/sections/" + sectionId
+            var url = GRAPH_BASE + "/me/onenote/sections/" + sectionId
                     + "/pages?$orderby=createdDateTime";
 
-            List<PageResponse> responses = client.getPaginated(url, PageResponse.class);
+            var responses = client.getPaginated(url, PageResponse.class);
 
             return responses.stream()
                     .map(this::toPageInfo)
-                    .collect(Collectors.toList());
+                    .toList();
         } catch (IOException e) {
             throw new RuntimeException("Failed to list pages for section: " + sectionId, e);
         }
     }
 
     private PageInfo toPageInfo(PageResponse response) {
-        Instant created = response.getCreatedDateTime() != null
-                ? Instant.parse(response.getCreatedDateTime())
+        var created = response.createdDateTime() != null
+                ? Instant.parse(response.createdDateTime())
                 : null;
-        return new PageInfo(response.getId(), response.getTitle(), created);
+        return new PageInfo(response.id(), response.title(), created);
     }
 }

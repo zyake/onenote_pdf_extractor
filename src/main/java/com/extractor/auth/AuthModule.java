@@ -56,18 +56,17 @@ public class AuthModule {
      */
     public AuthResult authenticate() {
         try {
-            Consumer<DeviceCode> deviceCodeConsumer = deviceCode -> {
-                System.out.println("To sign in, use a web browser to open the page "
-                        + deviceCode.verificationUri()
-                        + " and enter the code " + deviceCode.userCode()
-                        + " to authenticate.");
-            };
+            Consumer<DeviceCode> deviceCodeConsumer = deviceCode ->
+                    System.out.println("To sign in, use a web browser to open the page "
+                            + deviceCode.verificationUri()
+                            + " and enter the code " + deviceCode.userCode()
+                            + " to authenticate.");
 
-            DeviceCodeFlowParameters parameters = DeviceCodeFlowParameters
+            var parameters = DeviceCodeFlowParameters
                     .builder(scopes, deviceCodeConsumer)
                     .build();
 
-            IAuthenticationResult result = clientApplication
+            var result = clientApplication
                     .acquireToken(parameters)
                     .join();
 
@@ -75,7 +74,7 @@ public class AuthModule {
 
             return toAuthResult(result);
         } catch (Exception e) {
-            String message = "Authentication failed: " + e.getMessage();
+            var message = "Authentication failed: " + e.getMessage();
             System.err.println(message);
             throw new RuntimeException(message, e);
         }
@@ -95,7 +94,7 @@ public class AuthModule {
         if (isTokenExpired()) {
             try {
                 cachedAuthResult = acquireTokenSilently();
-            } catch (Exception e) {
+            } catch (Exception ignored) {
                 // Silent refresh failed — fall back to device code flow
                 authenticate();
             }
@@ -112,12 +111,12 @@ public class AuthModule {
     }
 
     private IAuthenticationResult acquireTokenSilently() throws Exception {
-        IAccount account = cachedAuthResult.account();
+        var account = cachedAuthResult.account();
         if (account == null) {
             throw new MsalException("No account available for silent token acquisition", "no_account");
         }
 
-        SilentParameters silentParameters = SilentParameters
+        var silentParameters = SilentParameters
                 .builder(scopes, account)
                 .build();
 
@@ -138,7 +137,7 @@ public class AuthModule {
     }
 
     private static AuthResult toAuthResult(IAuthenticationResult result) {
-        Instant expiresAt = result.expiresOnDate() != null
+        var expiresAt = result.expiresOnDate() != null
                 ? result.expiresOnDate().toInstant()
                 : Instant.now().plusSeconds(3600);
 

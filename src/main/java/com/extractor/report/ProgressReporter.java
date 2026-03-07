@@ -28,7 +28,7 @@ public class ProgressReporter {
     public ProgressReporter(Path logFilePath) throws IOException {
         this.logFilePath = logFilePath;
         // Ensure parent directories exist
-        Path parent = logFilePath.getParent();
+        var parent = logFilePath.getParent();
         if (parent != null) {
             Files.createDirectories(parent);
         }
@@ -44,7 +44,7 @@ public class ProgressReporter {
      * Prints: "Exporting page X of Y: Title"
      */
     public void reportPageStart(int current, int total, String pageTitle) {
-        String message = String.format("Exporting page %d of %d: %s", current, total, pageTitle);
+        var message = String.format("Exporting page %d of %d: %s", current, total, pageTitle);
         output(message);
     }
 
@@ -52,7 +52,7 @@ public class ProgressReporter {
      * Report successful page export.
      */
     public void reportPageSuccess(int current, int total, String pageTitle, String filename) {
-        String message = String.format("  SUCCESS: page %d of %d: %s -> %s", current, total, pageTitle, filename);
+        var message = String.format("  SUCCESS: page %d of %d: %s -> %s", current, total, pageTitle, filename);
         output(message);
     }
 
@@ -60,7 +60,7 @@ public class ProgressReporter {
      * Report failed page export.
      */
     public void reportPageFailure(int current, int total, String pageTitle, String pageId, String error) {
-        String message = String.format("  FAILED: page %d of %d: %s (id: %s) - %s",
+        var message = String.format("  FAILED: page %d of %d: %s (id: %s) - %s",
                 current, total, pageTitle, pageId, error);
         output(message);
     }
@@ -69,7 +69,7 @@ public class ProgressReporter {
      * Report final summary showing success/failure counts and listing failed pages.
      */
     public void reportSummary(int totalPages, int successCount, List<FailedPage> failures) {
-        int failureCount = failures != null ? failures.size() : 0;
+        var failureCount = failures != null ? failures.size() : 0;
 
         output("");
         output("=== Export Summary ===");
@@ -80,9 +80,9 @@ public class ProgressReporter {
         if (failures != null && !failures.isEmpty()) {
             output("");
             output("Failed pages:");
-            for (FailedPage fp : failures) {
+            for (var fp : failures) {
                 output(String.format("  - %s (id: %s): %s",
-                        fp.getPageTitle(), fp.getPageId(), fp.getErrorMessage()));
+                        fp.pageTitle(), fp.pageId(), fp.errorMessage()));
             }
         }
     }

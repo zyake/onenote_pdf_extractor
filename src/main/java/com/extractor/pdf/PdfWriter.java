@@ -25,22 +25,21 @@ public class PdfWriter {
      * Write PDF bytes to a file. Returns the final filename used.
      */
     public String writePdf(String pageTitle, String pageId, byte[] pdfContent) throws IOException {
-        String sanitized = sanitizeFilename(pageTitle);
+        var sanitized = sanitizeFilename(pageTitle);
         if (sanitized.isEmpty()) {
             sanitized = sanitizeFilename(pageId);
         }
 
         if (sanitized.length() > MAX_FILENAME_LENGTH) {
             sanitized = sanitized.substring(0, MAX_FILENAME_LENGTH);
-            // Trim trailing underscores after truncation
             sanitized = sanitized.replaceAll("_+$", "");
         }
 
-        String filename = sanitized + PDF_EXTENSION;
+        var filename = sanitized + PDF_EXTENSION;
         filename = resolveCollision(filename);
 
         usedFilenames.add(filename);
-        Path filePath = outputDirectory.resolve(filename);
+        var filePath = outputDirectory.resolve(filename);
         Files.write(filePath, pdfContent);
 
         return filename;
@@ -48,21 +47,14 @@ public class PdfWriter {
 
     /**
      * Sanitize a page title for use as a filename.
-     * Replaces characters not in [a-zA-Z0-9._-] with underscores,
-     * collapses consecutive underscores, and trims leading/trailing underscores.
      */
     public static String sanitizeFilename(String title) {
         if (title == null || title.isEmpty()) {
             return "";
         }
 
-        // Replace characters not in [a-zA-Z0-9._-] with underscores
-        String sanitized = title.replaceAll("[^a-zA-Z0-9._\\-]", "_");
-
-        // Collapse consecutive underscores into one
+        var sanitized = title.replaceAll("[^a-zA-Z0-9._\\-]", "_");
         sanitized = sanitized.replaceAll("_+", "_");
-
-        // Trim leading and trailing underscores
         sanitized = sanitized.replaceAll("^_+", "");
         sanitized = sanitized.replaceAll("_+$", "");
 
@@ -78,8 +70,8 @@ public class PdfWriter {
             return baseFilename;
         }
 
-        String nameWithoutExt = baseFilename.substring(0, baseFilename.length() - PDF_EXTENSION.length());
-        int counter = 1;
+        var nameWithoutExt = baseFilename.substring(0, baseFilename.length() - PDF_EXTENSION.length());
+        var counter = 1;
         String candidate;
         do {
             candidate = nameWithoutExt + "_" + counter + PDF_EXTENSION;

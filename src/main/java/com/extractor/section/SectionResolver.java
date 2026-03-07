@@ -8,7 +8,6 @@ import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonProperty;
 
 import java.io.IOException;
-import java.util.List;
 import java.util.stream.Collectors;
 
 /**
@@ -35,16 +34,16 @@ public class SectionResolver {
      */
     public SectionInfo resolveById(String sectionId) {
         try {
-            String url = GRAPH_BASE + "/me/onenote/sections/" + sectionId;
-            SectionDetailResponse detail = client.getJson(url, SectionDetailResponse.class);
+            var url = GRAPH_BASE + "/me/onenote/sections/" + sectionId;
+            var detail = client.getJson(url, SectionDetailResponse.class);
 
-            String notebookName = detail.parentNotebook != null
+            var notebookName = detail.parentNotebook != null
                     ? detail.parentNotebook.displayName
                     : "Unknown";
 
-            int pageCount = countPages(sectionId);
+            var pageCount = countPages(sectionId);
 
-            SectionInfo info = new SectionInfo(
+            var info = new SectionInfo(
                     detail.id,
                     detail.displayName,
                     notebookName,
@@ -71,20 +70,20 @@ public class SectionResolver {
     public SectionInfo resolveByName(String notebookName, String sectionName) {
         try {
             // Step 1: List all notebooks
-            List<NotebookResponse> notebooks = client.getPaginated(
+            var notebooks = client.getPaginated(
                     GRAPH_BASE + "/me/onenote/notebooks",
                     NotebookResponse.class
             );
 
             // Step 2: Find matching notebook (case-insensitive)
-            List<NotebookResponse> matchingNotebooks = notebooks.stream()
-                    .filter(nb -> nb.getDisplayName() != null
-                            && nb.getDisplayName().equalsIgnoreCase(notebookName))
-                    .collect(Collectors.toList());
+            var matchingNotebooks = notebooks.stream()
+                    .filter(nb -> nb.displayName() != null
+                            && nb.displayName().equalsIgnoreCase(notebookName))
+                    .toList();
 
             if (matchingNotebooks.isEmpty()) {
-                String available = notebooks.stream()
-                        .map(NotebookResponse::getDisplayName)
+                var available = notebooks.stream()
+                        .map(NotebookResponse::displayName)
                         .collect(Collectors.joining(", "));
                 throw new RuntimeException(
                         "Notebook not found: '" + notebookName + "'. Available notebooks: " + available
@@ -92,21 +91,21 @@ public class SectionResolver {
             }
 
             // Step 3: List sections in the matching notebook
-            NotebookResponse notebook = matchingNotebooks.get(0);
-            List<SectionResponse> sections = client.getPaginated(
-                    GRAPH_BASE + "/me/onenote/notebooks/" + notebook.getId() + "/sections",
+            var notebook = matchingNotebooks.getFirst();
+            var sections = client.getPaginated(
+                    GRAPH_BASE + "/me/onenote/notebooks/" + notebook.id() + "/sections",
                     SectionResponse.class
             );
 
             // Step 4: Find matching section (case-insensitive)
-            List<SectionResponse> matchingSections = sections.stream()
-                    .filter(s -> s.getDisplayName() != null
-                            && s.getDisplayName().equalsIgnoreCase(sectionName))
-                    .collect(Collectors.toList());
+            var matchingSections = sections.stream()
+                    .filter(s -> s.displayName() != null
+                            && s.displayName().equalsIgnoreCase(sectionName))
+                    .toList();
 
             if (matchingSections.isEmpty()) {
-                String available = sections.stream()
-                        .map(SectionResponse::getDisplayName)
+                var available = sections.stream()
+                        .map(SectionResponse::displayName)
                         .collect(Collectors.joining(", "));
                 throw new RuntimeException(
                         "Section not found: '" + sectionName + "' in notebook '" + notebookName
@@ -116,8 +115,8 @@ public class SectionResolver {
 
             // Step 5: Handle ambiguous matches
             if (matchingSections.size() > 1) {
-                String details = matchingSections.stream()
-                        .map(s -> "  - " + s.getDisplayName() + " (ID: " + s.getId() + ")")
+                var details = matchingSections.stream()
+                        .map(s -> "  - " + s.displayName() + " (ID: " + s.id() + ")")
                         .collect(Collectors.joining("\n"));
                 throw new RuntimeException(
                         "Multiple sections found matching '" + sectionName + "' in notebook '"
@@ -126,13 +125,13 @@ public class SectionResolver {
             }
 
             // Step 6: Build SectionInfo with page count
-            SectionResponse matchedSection = matchingSections.get(0);
-            int pageCount = countPages(matchedSection.getId());
+            var matchedSection = matchingSections.getFirst();
+            var pageCount = countPages(matchedSection.id());
 
-            SectionInfo info = new SectionInfo(
-                    matchedSection.getId(),
-                    matchedSection.getDisplayName(),
-                    notebook.getDisplayName(),
+            var info = new SectionInfo(
+                    matchedSection.id(),
+                    matchedSection.displayName(),
+                    notebook.displayName(),
                     pageCount
             );
 
@@ -147,8 +146,8 @@ public class SectionResolver {
      * Counts the number of pages in a section by listing them via the Graph API.
      */
     private int countPages(String sectionId) throws IOException {
-        String url = GRAPH_BASE + "/me/onenote/sections/" + sectionId + "/pages";
-        List<?> pages = client.getPaginated(url, PageStub.class);
+        var url = GRAPH_BASE + "/me/onenote/sections/" + sectionId + "/pages";
+        var pages = client.getPaginated(url, PageStub.class);
         return pages.size();
     }
 
@@ -156,9 +155,9 @@ public class SectionResolver {
      * Displays section name and page count to stdout (Requirement 2.5).
      */
     private void displaySectionInfo(SectionInfo info) {
-        System.out.println("Section: " + info.getSectionName()
-                + " (Notebook: " + info.getNotebookName() + ")");
-        System.out.println("Pages found: " + info.getPageCount());
+        System.out.println("Section: " + info.sectionName()
+                + " (Notebook: " + info.notebookName() + ")");
+        System.out.println("Pages found: " + info.pageCount());
     }
 
     /**

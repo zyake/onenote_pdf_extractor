@@ -1,7 +1,6 @@
 package com.extractor.client;
 
 import com.extractor.auth.AuthModule;
-import com.fasterxml.jackson.databind.JavaType;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
 import java.io.IOException;
@@ -43,26 +42,21 @@ public class GraphClientWrapper {
 
     /**
      * Execute a GET request, returning the response body as bytes.
-     *
-     * @param url     the full URL to request
-     * @param headers additional headers to include (may be null or empty)
-     * @return the response body as a byte array
-     * @throws IOException if the request fails after all retries
      */
     public byte[] getBytes(String url, Map<String, String> headers) throws IOException {
         return executeWithRetry(() -> {
-            HttpRequest.Builder builder = HttpRequest.newBuilder()
+            var builder = HttpRequest.newBuilder()
                     .uri(URI.create(url))
                     .header("Authorization", "Bearer " + authModule.getAccessToken())
                     .GET();
 
             if (headers != null) {
-                for (Map.Entry<String, String> entry : headers.entrySet()) {
+                for (var entry : headers.entrySet()) {
                     builder.header(entry.getKey(), entry.getValue());
                 }
             }
 
-            HttpResponse<byte[]> response = httpClient.send(
+            var response = httpClient.send(
                     builder.build(),
                     HttpResponse.BodyHandlers.ofByteArray()
             );
@@ -74,23 +68,17 @@ public class GraphClientWrapper {
 
     /**
      * Execute a GET request, returning parsed JSON.
-     *
-     * @param url          the full URL to request
-     * @param responseType the class to deserialize the JSON response into
-     * @param <T>          the response type
-     * @return the deserialized response object
-     * @throws IOException if the request fails after all retries
      */
     public <T> T getJson(String url, Class<T> responseType) throws IOException {
         return executeWithRetry(() -> {
-            HttpRequest request = HttpRequest.newBuilder()
+            var request = HttpRequest.newBuilder()
                     .uri(URI.create(url))
                     .header("Authorization", "Bearer " + authModule.getAccessToken())
                     .header("Accept", "application/json")
                     .GET()
                     .build();
 
-            HttpResponse<String> response = httpClient.send(
+            var response = httpClient.send(
                     request,
                     HttpResponse.BodyHandlers.ofString()
             );
@@ -102,32 +90,26 @@ public class GraphClientWrapper {
 
     /**
      * Execute a paginated GET, following @odata.nextLink until all items are collected.
-     *
-     * @param url      the initial URL to request
-     * @param itemType the class of items in the "value" array
-     * @param <T>      the item type
-     * @return a list of all items across all pages
-     * @throws IOException if any page request fails after all retries
      */
     public <T> List<T> getPaginated(String url, Class<T> itemType) throws IOException {
-        List<T> allItems = new ArrayList<>();
-        String currentUrl = url;
+        var allItems = new ArrayList<T>();
+        var currentUrl = url;
 
-        JavaType pagedType = objectMapper.getTypeFactory()
+        var pagedType = objectMapper.getTypeFactory()
                 .constructParametricType(ODataPagedResponse.class, itemType);
 
         while (currentUrl != null) {
-            final String requestUrl = currentUrl;
+            final var requestUrl = currentUrl;
 
             ODataPagedResponse<T> page = executeWithRetry(() -> {
-                HttpRequest request = HttpRequest.newBuilder()
+                var request = HttpRequest.newBuilder()
                         .uri(URI.create(requestUrl))
                         .header("Authorization", "Bearer " + authModule.getAccessToken())
                         .header("Accept", "application/json")
                         .GET()
                         .build();
 
-                HttpResponse<String> response = httpClient.send(
+                var response = httpClient.send(
                         request,
                         HttpResponse.BodyHandlers.ofString()
                 );
@@ -136,10 +118,10 @@ public class GraphClientWrapper {
                 return objectMapper.readValue(response.body(), pagedType);
             });
 
-            if (page.getValue() != null) {
-                allItems.addAll(page.getValue());
+            if (page.value() != null) {
+                allItems.addAll(page.value());
             }
-            currentUrl = page.getNextLink();
+            currentUrl = page.nextLink();
         }
 
         return Collections.unmodifiableList(allItems);
@@ -152,7 +134,7 @@ public class GraphClientWrapper {
     private <T> T executeWithRetry(RetryableRequest<T> request) throws IOException {
         IOException lastException = null;
 
-        for (int attempt = 0; attempt <= MAX_RETRIES; attempt++) {
+        for (var attempt = 0; attempt <= MAX_RETRIES; attempt++) {
             try {
                 return request.execute();
             } catch (HttpRetryException e) {
@@ -160,7 +142,7 @@ public class GraphClientWrapper {
                 if (attempt == MAX_RETRIES) {
                     break;
                 }
-                long backoffMs = e.getRetryAfterMs() > 0
+                var backoffMs = e.getRetryAfterMs() > 0
                         ? e.getRetryAfterMs()
                         : (long) (INITIAL_BACKOFF_MS * Math.pow(BACKOFF_MULTIPLIER, attempt));
                 sleep(backoffMs);
@@ -172,7 +154,7 @@ public class GraphClientWrapper {
                 if (attempt == MAX_RETRIES) {
                     break;
                 }
-                long backoffMs = (long) (INITIAL_BACKOFF_MS * Math.pow(BACKOFF_MULTIPLIER, attempt));
+                var backoffMs = (long) (INITIAL_BACKOFF_MS * Math.pow(BACKOFF_MULTIPLIER, attempt));
                 sleep(backoffMs);
             }
         }
@@ -185,13 +167,13 @@ public class GraphClientWrapper {
      * for error responses.
      */
     private void handleErrorStatus(HttpResponse<?> response) throws HttpRetryException, IOException {
-        int statusCode = response.statusCode();
+        var statusCode = response.statusCode();
         if (statusCode >= 200 && statusCode < 300) {
             return;
         }
 
         if (statusCode == 429) {
-            long retryAfterMs = parseRetryAfter(response);
+            var retryAfterMs = parseRetryAfter(response);
             throw new HttpRetryException(statusCode, "Rate limited (HTTP 429)", retryAfterMs);
         }
 
@@ -199,21 +181,19 @@ public class GraphClientWrapper {
             throw new HttpRetryException(statusCode, "Server error (HTTP " + statusCode + ")", -1);
         }
 
-        // Non-retryable client errors (4xx except 429) — wrap in IOException to fail immediately
         throw new IOException("HTTP " + statusCode + ": request failed");
     }
 
     /**
      * Parses the Retry-After header value from an HTTP response.
-     * Returns the value in milliseconds, or -1 if not present or unparseable.
      */
     private long parseRetryAfter(HttpResponse<?> response) {
         return response.headers()
                 .firstValue("Retry-After")
                 .map(value -> {
                     try {
-                        return Long.parseLong(value) * 1000; // seconds to ms
-                    } catch (NumberFormatException e) {
+                        return Long.parseLong(value) * 1000;
+                    } catch (NumberFormatException ignored) {
                         return -1L;
                     }
                 })
@@ -226,7 +206,7 @@ public class GraphClientWrapper {
     void sleep(long millis) {
         try {
             Thread.sleep(millis);
-        } catch (InterruptedException e) {
+        } catch (InterruptedException ignored) {
             Thread.currentThread().interrupt();
         }
     }

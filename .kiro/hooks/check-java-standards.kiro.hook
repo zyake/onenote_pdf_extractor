@@ -1,0 +1,16 @@
+{
+  "enabled": true,
+  "name": "Check Java Standards on Edit",
+  "description": "When Java source files are edited, reviews the changes against the project's steering files (e.g., java-standards.md) and flags any violations of the defined coding standards.",
+  "version": "1",
+  "when": {
+    "type": "fileEdited",
+    "patterns": [
+      "**/*.java"
+    ]
+  },
+  "then": {
+    "type": "askAgent",
+    "prompt": "Review the edited Java file against the project steering files in .kiro/steering/. Check for violations of the standards defined there (security practices, Java version features, coding conventions). If any issues are found, list them concisely and suggest fixes. If the file follows all standards, confirm compliance briefly."
+  }
+}
