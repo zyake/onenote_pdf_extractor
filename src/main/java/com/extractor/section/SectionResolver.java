@@ -37,15 +37,15 @@ public class SectionResolver {
             var url = GRAPH_BASE + "/me/onenote/sections/" + sectionId;
             var detail = client.getJson(url, SectionDetailResponse.class);
 
-            var notebookName = detail.parentNotebook != null
-                    ? detail.parentNotebook.displayName
+            var notebookName = detail.parentNotebook() != null
+                    ? detail.parentNotebook().displayName()
                     : "Unknown";
 
             var pageCount = countPages(sectionId);
 
             var info = new SectionInfo(
-                    detail.id,
-                    detail.displayName,
+                    detail.id(),
+                    detail.displayName(),
                     notebookName,
                     pageCount
             );
@@ -164,33 +164,22 @@ public class SectionResolver {
      * Minimal stub for counting pages — only needs the id field.
      */
     @JsonIgnoreProperties(ignoreUnknown = true)
-    static class PageStub {
-        @JsonProperty("id")
-        public String id;
-    }
+    record PageStub(@JsonProperty("id") String id) {}
 
     /**
      * Extended section response that includes parentNotebook info,
      * used when resolving by ID.
      */
     @JsonIgnoreProperties(ignoreUnknown = true)
-    static class SectionDetailResponse {
-        @JsonProperty("id")
-        public String id;
-
-        @JsonProperty("displayName")
-        public String displayName;
-
-        @JsonProperty("parentNotebook")
-        public ParentNotebook parentNotebook;
-    }
+    record SectionDetailResponse(
+            @JsonProperty("id") String id,
+            @JsonProperty("displayName") String displayName,
+            @JsonProperty("parentNotebook") ParentNotebook parentNotebook
+    ) {}
 
     @JsonIgnoreProperties(ignoreUnknown = true)
-    static class ParentNotebook {
-        @JsonProperty("id")
-        public String id;
-
-        @JsonProperty("displayName")
-        public String displayName;
-    }
+    record ParentNotebook(
+            @JsonProperty("id") String id,
+            @JsonProperty("displayName") String displayName
+    ) {}
 }

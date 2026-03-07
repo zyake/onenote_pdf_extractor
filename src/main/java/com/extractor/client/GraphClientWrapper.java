@@ -144,7 +144,7 @@ public class GraphClientWrapper {
                 }
                 var backoffMs = e.getRetryAfterMs() > 0
                         ? e.getRetryAfterMs()
-                        : (long) (INITIAL_BACKOFF_MS * Math.pow(BACKOFF_MULTIPLIER, attempt));
+                        : calculateBackoff(attempt);
                 sleep(backoffMs);
             } catch (InterruptedException e) {
                 Thread.currentThread().interrupt();
@@ -154,8 +154,7 @@ public class GraphClientWrapper {
                 if (attempt == MAX_RETRIES) {
                     break;
                 }
-                var backoffMs = (long) (INITIAL_BACKOFF_MS * Math.pow(BACKOFF_MULTIPLIER, attempt));
-                sleep(backoffMs);
+                sleep(calculateBackoff(attempt));
             }
         }
 
@@ -163,37 +162,47 @@ public class GraphClientWrapper {
     }
 
     /**
-     * Checks the HTTP response status and throws an appropriate exception
-     * for error responses.
+     * Calculates exponential backoff delay for a given retry attempt.
      */
-    private void handleErrorStatus(HttpResponse<?> response) throws HttpRetryException, IOException {
+    static long calculateBackoff(int attempt) {
+        return (long) (INITIAL_BACKOFF_MS * Math.pow(BACKOFF_MULTIPLIER, attempt));
+    }
+
+    /**
+     * Checks the HTTP response status and throws an appropriate exception
+     * for error responses. Uses pattern matching to categorize status codes.
+     */
+    void handleErrorStatus(HttpResponse<?> response) throws HttpRetryException, IOException {
         var statusCode = response.statusCode();
         if (statusCode >= 200 && statusCode < 300) {
             return;
         }
 
-        if (statusCode == 429) {
-            var retryAfterMs = parseRetryAfter(response);
-            throw new HttpRetryException(statusCode, "Rate limited (HTTP 429)", retryAfterMs);
+        switch (statusCode) {
+            case 429 -> {
+                var retryAfterMs = parseRetryAfter(response);
+                throw new HttpRetryException(statusCode, "Rate limited (HTTP 429)", retryAfterMs);
+            }
+            default -> {
+                if (statusCode >= 500) {
+                    throw new HttpRetryException(statusCode, "Server error (HTTP " + statusCode + ")", -1);
+                }
+                throw new IOException("HTTP " + statusCode + ": request failed");
+            }
         }
-
-        if (statusCode >= 500) {
-            throw new HttpRetryException(statusCode, "Server error (HTTP " + statusCode + ")", -1);
-        }
-
-        throw new IOException("HTTP " + statusCode + ": request failed");
     }
 
     /**
      * Parses the Retry-After header value from an HTTP response.
+     * Returns the wait duration in milliseconds, or -1 if not parseable.
      */
-    private long parseRetryAfter(HttpResponse<?> response) {
+    static long parseRetryAfter(HttpResponse<?> response) {
         return response.headers()
                 .firstValue("Retry-After")
                 .map(value -> {
                     try {
                         return Long.parseLong(value) * 1000;
-                    } catch (NumberFormatException ignored) {
+                    } catch (NumberFormatException _) {
                         return -1L;
                     }
                 })

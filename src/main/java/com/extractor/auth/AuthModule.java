@@ -94,7 +94,7 @@ public class AuthModule {
         if (isTokenExpired()) {
             try {
                 cachedAuthResult = acquireTokenSilently();
-            } catch (Exception ignored) {
+            } catch (Exception _) {
                 // Silent refresh failed — fall back to device code flow
                 authenticate();
             }

@@ -78,9 +78,10 @@ public class OneNotePdfExtractor implements Callable<Integer> {
         }
 
         // 3. Authenticate with Microsoft Graph
-        var clientId = System.getenv("ONENOTE_CLIENT_ID");
+        var clientId = getClientId();
         if (clientId == null || clientId.isBlank()) {
-            System.err.println("Error: ONENOTE_CLIENT_ID environment variable is not set.");
+            System.err.println("Error: ONENOTE_CLIENT_ID environment variable is not set. "
+                    + "Please set it to your Azure AD application client ID.");
             return 1;
         }
 
@@ -172,6 +173,14 @@ public class OneNotePdfExtractor implements Callable<Integer> {
         }
 
         return failures.isEmpty() ? 0 : 1;
+    }
+
+    /**
+     * Returns the client ID from the ONENOTE_CLIENT_ID environment variable.
+     * Package-private for testability.
+     */
+    String getClientId() {
+        return System.getenv("ONENOTE_CLIENT_ID");
     }
 
     private CliArgs buildCliArgs() {

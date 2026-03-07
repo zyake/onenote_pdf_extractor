@@ -10,6 +10,7 @@ import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.util.Map;
+import java.util.stream.Stream;
 
 /**
  * Downloads OneNote page content from the Microsoft Graph API.
@@ -53,31 +54,20 @@ public class PdfDownloader {
 
     /**
      * Extracts the URL of an embedded PDF resource from OneNote HTML.
+     * Checks for &lt;object&gt; tags with type="application/pdf" or data-attachment ending in .pdf.
      */
-    private String extractEmbeddedPdfUrl(String html) {
+    String extractEmbeddedPdfUrl(String html) {
         var doc = Jsoup.parse(html);
 
-        // Look for <object> tags with type="application/pdf"
-        var pdfObjects = doc.select("object[type=application/pdf]");
-        if (!pdfObjects.isEmpty()) {
-            var pdfObj = pdfObjects.first();
-            var dataUrl = pdfObj.attr("data");
-            if (dataUrl != null && !dataUrl.isBlank()) {
-                return dataUrl;
-            }
-        }
-
-        // Also check for <object> tags with data-attachment ending in .pdf
-        var attachments = doc.select("object[data-attachment$=.pdf]");
-        if (!attachments.isEmpty()) {
-            var attachment = attachments.first();
-            var dataUrl = attachment.attr("data");
-            if (dataUrl != null && !dataUrl.isBlank()) {
-                return dataUrl;
-            }
-        }
-
-        return null;
+        return Stream.of(
+                        doc.select("object[type=application/pdf]"),
+                        doc.select("object[data-attachment$=.pdf]")
+                )
+                .flatMap(elements -> elements.stream())
+                .map(el -> el.attr("data"))
+                .filter(data -> data != null && !data.isBlank())
+                .findFirst()
+                .orElse(null);
     }
 
     /**
