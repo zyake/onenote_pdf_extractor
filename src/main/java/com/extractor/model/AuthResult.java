@@ -1,0 +1,29 @@
+package com.extractor.model;
+
+import java.time.Instant;
+
+/**
+ * Holds the result of an OAuth2 authentication flow.
+ */
+public class AuthResult {
+    private String accessToken;
+    private String refreshToken;
+    private Instant expiresAt;
+
+    public AuthResult() {}
+
+    public AuthResult(String accessToken, String refreshToken, Instant expiresAt) {
+        this.accessToken = accessToken;
+        this.refreshToken = refreshToken;
+        this.expiresAt = expiresAt;
+    }
+
+    public String getAccessToken() { return accessToken; }
+    public void setAccessToken(String accessToken) { this.accessToken = accessToken; }
+
+    public String getRefreshToken() { return refreshToken; }
+    public void setRefreshToken(String refreshToken) { this.refreshToken = refreshToken; }
+
+    public Instant getExpiresAt() { return expiresAt; }
+    public void setExpiresAt(Instant expiresAt) { this.expiresAt = expiresAt; }
+}
