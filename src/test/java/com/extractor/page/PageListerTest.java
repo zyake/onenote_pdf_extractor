@@ -38,9 +38,9 @@ class PageListerTest {
                 + "/pages?$orderby=createdDateTime";
 
         var responses = List.of(
-                new PageResponse("p1", "First Page", "2024-01-01T10:00:00Z"),
-                new PageResponse("p2", "Second Page", "2024-01-02T10:00:00Z"),
-                new PageResponse("p3", "Third Page", "2024-01-03T10:00:00Z")
+                new PageResponse("p1", "First Page", "2024-01-01T10:00:00Z", "2024-01-10T10:00:00Z"),
+                new PageResponse("p2", "Second Page", "2024-01-02T10:00:00Z", "2024-01-11T10:00:00Z"),
+                new PageResponse("p3", "Third Page", "2024-01-03T10:00:00Z", "2024-01-12T10:00:00Z")
         );
 
         when(client.getPaginated(eq(url), eq(PageResponse.class))).thenReturn(responses);
@@ -59,7 +59,7 @@ class PageListerTest {
                 + "/pages?$orderby=createdDateTime";
 
         var responses = List.of(
-                new PageResponse("page-42", "My Notes", "2024-06-15T14:30:00Z")
+                new PageResponse("page-42", "My Notes", "2024-06-15T14:30:00Z", "2024-07-01T09:00:00Z")
         );
 
         when(client.getPaginated(eq(url), eq(PageResponse.class))).thenReturn(responses);
@@ -71,6 +71,7 @@ class PageListerTest {
         assertThat(page.pageId()).isEqualTo("page-42");
         assertThat(page.title()).isEqualTo("My Notes");
         assertThat(page.createdDateTime()).isEqualTo(Instant.parse("2024-06-15T14:30:00Z"));
+        assertThat(page.lastModifiedDateTime()).isEqualTo(Instant.parse("2024-07-01T09:00:00Z"));
     }
 
     @Test
@@ -80,7 +81,7 @@ class PageListerTest {
                 + "/pages?$orderby=createdDateTime";
 
         var responses = List.of(
-                new PageResponse("p-no-date", "Undated Page", null)
+                new PageResponse("p-no-date", "Undated Page", null, null)
         );
 
         when(client.getPaginated(eq(url), eq(PageResponse.class))).thenReturn(responses);
@@ -89,6 +90,7 @@ class PageListerTest {
 
         assertThat(result).hasSize(1);
         assertThat(result.getFirst().createdDateTime()).isNull();
+        assertThat(result.getFirst().lastModifiedDateTime()).isNull();
     }
 
     @Test

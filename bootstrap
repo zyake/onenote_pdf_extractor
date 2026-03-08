@@ -1,0 +1,11 @@
+#!/bin/sh
+# AWS Lambda custom runtime bootstrap script
+# Starts the Lambda Runtime Interface Client (RIC) with JDK 25 and --enable-preview
+
+set -euo pipefail
+
+exec ${JAVA_HOME}/bin/java \
+    --enable-preview \
+    -cp "${LAMBDA_TASK_ROOT}/lib/app.jar" \
+    com.amazonaws.services.lambda.runtime.api.client.AWSLambda \
+    "$_HANDLER"

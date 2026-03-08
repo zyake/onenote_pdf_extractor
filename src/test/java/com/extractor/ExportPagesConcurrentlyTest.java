@@ -46,9 +46,9 @@ class ExportPagesConcurrentlyTest {
     @Test
     void allPagesSucceed_returnsCorrectCounts() throws Exception {
         var pages = List.of(
-                new PageInfo("p1", "Page One", Instant.now()),
-                new PageInfo("p2", "Page Two", Instant.now()),
-                new PageInfo("p3", "Page Three", Instant.now())
+                new PageInfo("p1", "Page One", Instant.now(), Instant.now()),
+                new PageInfo("p2", "Page Two", Instant.now(), Instant.now()),
+                new PageInfo("p3", "Page Three", Instant.now(), Instant.now())
         );
 
         when(downloader.downloadPageAsPdf(anyString())).thenReturn(new byte[]{1, 2, 3});
@@ -66,8 +66,8 @@ class ExportPagesConcurrentlyTest {
     @Test
     void allPagesFail_returnsAllFailures() throws Exception {
         var pages = List.of(
-                new PageInfo("p1", "Page One", Instant.now()),
-                new PageInfo("p2", "Page Two", Instant.now())
+                new PageInfo("p1", "Page One", Instant.now(), Instant.now()),
+                new PageInfo("p2", "Page Two", Instant.now(), Instant.now())
         );
 
         when(downloader.downloadPageAsPdf(anyString())).thenThrow(new IOException("Network error"));
@@ -85,9 +85,9 @@ class ExportPagesConcurrentlyTest {
     @Test
     void mixedSuccessAndFailure_recordsBoth() throws Exception {
         var pages = List.of(
-                new PageInfo("p1", "Page One", Instant.now()),
-                new PageInfo("p2", "Page Two", Instant.now()),
-                new PageInfo("p3", "Page Three", Instant.now())
+                new PageInfo("p1", "Page One", Instant.now(), Instant.now()),
+                new PageInfo("p2", "Page Two", Instant.now(), Instant.now()),
+                new PageInfo("p3", "Page Three", Instant.now(), Instant.now())
         );
 
         when(downloader.downloadPageAsPdf("p1")).thenReturn(new byte[]{1});
@@ -117,7 +117,7 @@ class ExportPagesConcurrentlyTest {
 
     @Test
     void singlePage_succeeds() throws Exception {
-        var pages = List.of(new PageInfo("p1", "Solo Page", Instant.now()));
+        var pages = List.of(new PageInfo("p1", "Solo Page", Instant.now(), Instant.now()));
 
         when(downloader.downloadPageAsPdf("p1")).thenReturn(new byte[]{42});
         when(writer.writePdf(anyString(), anyString(), any(byte[].class)))
@@ -133,8 +133,8 @@ class ExportPagesConcurrentlyTest {
     @Test
     void reportsProgressForEachPage() throws Exception {
         var pages = List.of(
-                new PageInfo("p1", "Page One", Instant.now()),
-                new PageInfo("p2", "Page Two", Instant.now())
+                new PageInfo("p1", "Page One", Instant.now(), Instant.now()),
+                new PageInfo("p2", "Page Two", Instant.now(), Instant.now())
         );
 
         when(downloader.downloadPageAsPdf(anyString())).thenReturn(new byte[]{1});
@@ -150,7 +150,7 @@ class ExportPagesConcurrentlyTest {
 
     @Test
     void reportsFailureForFailedPages() throws Exception {
-        var pages = List.of(new PageInfo("p1", "Failing Page", Instant.now()));
+        var pages = List.of(new PageInfo("p1", "Failing Page", Instant.now(), Instant.now()));
 
         when(downloader.downloadPageAsPdf("p1")).thenThrow(new RuntimeException("Boom"));
 
@@ -162,7 +162,7 @@ class ExportPagesConcurrentlyTest {
 
     @Test
     void nullPageTitle_fallsBackToPageId() throws Exception {
-        var pages = List.of(new PageInfo("p1", null, Instant.now()));
+        var pages = List.of(new PageInfo("p1", null, Instant.now(), Instant.now()));
 
         when(downloader.downloadPageAsPdf("p1")).thenReturn(new byte[]{1});
         when(writer.writePdf(anyString(), anyString(), any(byte[].class)))
@@ -181,12 +181,12 @@ class ExportPagesConcurrentlyTest {
         var currentConcurrency = new AtomicInteger(0);
 
         var pages = List.of(
-                new PageInfo("p1", "Page 1", Instant.now()),
-                new PageInfo("p2", "Page 2", Instant.now()),
-                new PageInfo("p3", "Page 3", Instant.now()),
-                new PageInfo("p4", "Page 4", Instant.now()),
-                new PageInfo("p5", "Page 5", Instant.now()),
-                new PageInfo("p6", "Page 6", Instant.now())
+                new PageInfo("p1", "Page 1", Instant.now(), Instant.now()),
+                new PageInfo("p2", "Page 2", Instant.now(), Instant.now()),
+                new PageInfo("p3", "Page 3", Instant.now(), Instant.now()),
+                new PageInfo("p4", "Page 4", Instant.now(), Instant.now()),
+                new PageInfo("p5", "Page 5", Instant.now(), Instant.now()),
+                new PageInfo("p6", "Page 6", Instant.now(), Instant.now())
         );
 
         when(downloader.downloadPageAsPdf(anyString())).thenAnswer(_ -> {
@@ -207,7 +207,7 @@ class ExportPagesConcurrentlyTest {
 
     @Test
     void writerExceptionIsCapturedAsFailure() throws Exception {
-        var pages = List.of(new PageInfo("p1", "Page One", Instant.now()));
+        var pages = List.of(new PageInfo("p1", "Page One", Instant.now(), Instant.now()));
 
         when(downloader.downloadPageAsPdf("p1")).thenReturn(new byte[]{1});
         when(writer.writePdf(anyString(), anyString(), any(byte[].class)))

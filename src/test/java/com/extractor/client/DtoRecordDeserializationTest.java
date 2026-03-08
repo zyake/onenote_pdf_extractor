@@ -36,12 +36,13 @@ class DtoRecordDeserializationTest {
     @Test
     void pageResponseDeserializes() throws Exception {
         var json = """
-                {"id": "page-1", "title": "My Page", "createdDateTime": "2024-01-15T10:30:00Z", "extra": true}
+                {"id": "page-1", "title": "My Page", "createdDateTime": "2024-01-15T10:30:00Z", "lastModifiedDateTime": "2024-02-20T08:45:00Z", "extra": true}
                 """;
         var result = mapper.readValue(json, PageResponse.class);
         assertThat(result.id()).isEqualTo("page-1");
         assertThat(result.title()).isEqualTo("My Page");
         assertThat(result.createdDateTime()).isEqualTo("2024-01-15T10:30:00Z");
+        assertThat(result.lastModifiedDateTime()).isEqualTo("2024-02-20T08:45:00Z");
     }
 
     @Test
@@ -70,7 +71,7 @@ class DtoRecordDeserializationTest {
     void odataPagedResponseDeserializesWithNullNextLink() throws Exception {
         var json = """
                 {
-                  "value": [{"id": "p-1", "title": "Page", "createdDateTime": "2024-01-01T00:00:00Z"}]
+                  "value": [{"id": "p-1", "title": "Page", "createdDateTime": "2024-01-01T00:00:00Z", "lastModifiedDateTime": "2024-01-02T00:00:00Z"}]
                 }
                 """;
         var type = mapper.getTypeFactory()

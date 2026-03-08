@@ -1,6 +1,6 @@
 package com.extractor.client;
 
-import com.extractor.auth.AuthModule;
+import com.extractor.auth.TokenProvider;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
 import java.io.IOException;
@@ -23,18 +23,18 @@ public class GraphClientWrapper {
     static final long INITIAL_BACKOFF_MS = 1000;
     static final double BACKOFF_MULTIPLIER = 2.0;
 
-    private final AuthModule authModule;
+    private final TokenProvider authModule;
     private final HttpClient httpClient;
     private final ObjectMapper objectMapper;
 
-    public GraphClientWrapper(AuthModule authModule) {
+    public GraphClientWrapper(TokenProvider authModule) {
         this(authModule, HttpClient.newHttpClient(), new ObjectMapper());
     }
 
     /**
      * Package-private constructor for testing with injected dependencies.
      */
-    GraphClientWrapper(AuthModule authModule, HttpClient httpClient, ObjectMapper objectMapper) {
+    GraphClientWrapper(TokenProvider authModule, HttpClient httpClient, ObjectMapper objectMapper) {
         this.authModule = authModule;
         this.httpClient = httpClient;
         this.objectMapper = objectMapper;

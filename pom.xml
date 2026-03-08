@@ -57,6 +57,76 @@
             <version>${jackson.version}</version>
         </dependency>
 
+        <!-- AWS SDK v2 SSM Parameter Store -->
+        <dependency>
+            <groupId>software.amazon.awssdk</groupId>
+            <artifactId>ssm</artifactId>
+            <version>2.29.51</version>
+        </dependency>
+
+        <!-- AWS SDK v2 DynamoDB -->
+        <dependency>
+            <groupId>software.amazon.awssdk</groupId>
+            <artifactId>dynamodb</artifactId>
+            <version>2.29.51</version>
+        </dependency>
+
+        <!-- AWS SDK v2 S3 -->
+        <dependency>
+            <groupId>software.amazon.awssdk</groupId>
+            <artifactId>s3</artifactId>
+            <version>2.29.51</version>
+        </dependency>
+
+        <!-- AWS SDK v2 CloudWatch -->
+        <dependency>
+            <groupId>software.amazon.awssdk</groupId>
+            <artifactId>cloudwatch</artifactId>
+            <version>2.29.51</version>
+        </dependency>
+
+        <!-- AWS Lambda Java Runtime -->
+        <dependency>
+            <groupId>com.amazonaws</groupId>
+            <artifactId>aws-lambda-java-core</artifactId>
+            <version>1.2.3</version>
+        </dependency>
+        <dependency>
+            <groupId>com.amazonaws</groupId>
+            <artifactId>aws-lambda-java-events</artifactId>
+            <version>3.14.0</version>
+        </dependency>
+        <!-- AWS Lambda Runtime Interface Client (RIC) for custom runtime bootstrap -->
+        <dependency>
+            <groupId>com.amazonaws</groupId>
+            <artifactId>aws-lambda-java-runtime-interface-client</artifactId>
+            <version>2.6.0</version>
+        </dependency>
+
+        <!-- Google Auth Library for service account credentials -->
+        <dependency>
+            <groupId>com.google.auth</groupId>
+            <artifactId>google-auth-library-oauth2-http</artifactId>
+            <version>1.23.0</version>
+        </dependency>
+
+        <!-- Google API Client for Drive API (NotebookLM uploads) -->
+        <dependency>
+            <groupId>com.google.api-client</groupId>
+            <artifactId>google-api-client</artifactId>
+            <version>2.7.2</version>
+        </dependency>
+        <dependency>
+            <groupId>com.google.apis</groupId>
+            <artifactId>google-api-services-drive</artifactId>
+            <version>v3-rev20251210-2.0.0</version>
+        </dependency>
+        <dependency>
+            <groupId>com.google.http-client</groupId>
+            <artifactId>google-http-client-jackson2</artifactId>
+            <version>1.45.3</version>
+        </dependency>
+
         <!-- HTML to PDF conversion -->
         <dependency>
             <groupId>com.openhtmltopdf</groupId>
@@ -163,6 +233,8 @@
                                 <transformer implementation="org.apache.maven.plugins.shade.resource.ManifestResourceTransformer">
                                     <mainClass>com.extractor.OneNotePdfExtractor</mainClass>
                                 </transformer>
+                                <!-- Merge META-INF/services files for AWS SDK v2 ServiceLoader discovery -->
+                                <transformer implementation="org.apache.maven.plugins.shade.resource.ServicesResourceTransformer"/>
                             </transformers>
                             <filters>
                                 <filter>
@@ -181,3 +253,4 @@
         </plugins>
     </build>
 </project>
+

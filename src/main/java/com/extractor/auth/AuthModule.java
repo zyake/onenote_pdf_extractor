@@ -12,7 +12,7 @@ import java.util.function.Consumer;
  * Handles OAuth2 token acquisition and refresh via MSAL4J.
  * Uses device code flow for CLI-friendly authentication.
  */
-public class AuthModule {
+public class AuthModule implements TokenProvider {
 
     private static final String DEFAULT_AUTHORITY = "https://login.microsoftonline.com/common";
     private static final Set<String> SCOPES = Set.of("Notes.Read", "Notes.Read.All");

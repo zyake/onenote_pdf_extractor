@@ -130,8 +130,8 @@ class OneNotePdfExtractorTest {
 
         var sectionInfo = new SectionInfo("sec-1", "Test Section", "Test Notebook", 2);
         var pages = List.of(
-                new PageInfo("p1", "Page One", Instant.now()),
-                new PageInfo("p2", "Page Two", Instant.now())
+                new PageInfo("p1", "Page One", Instant.now(), Instant.now()),
+                new PageInfo("p2", "Page Two", Instant.now(), Instant.now())
         );
 
         try (
@@ -171,8 +171,8 @@ class OneNotePdfExtractorTest {
 
         var sectionInfo = new SectionInfo("sec-1", "Test Section", "Test Notebook", 2);
         var pages = List.of(
-                new PageInfo("p1", "Page One", Instant.now()),
-                new PageInfo("p2", "Page Two", Instant.now())
+                new PageInfo("p1", "Page One", Instant.now(), Instant.now()),
+                new PageInfo("p2", "Page Two", Instant.now(), Instant.now())
         );
 
         try (
@@ -209,9 +209,9 @@ class OneNotePdfExtractorTest {
 
         var sectionInfo = new SectionInfo("sec-1", "Test Section", "Test Notebook", 3);
         var pages = List.of(
-                new PageInfo("p1", "Page One", Instant.now()),
-                new PageInfo("p2", "Page Two", Instant.now()),
-                new PageInfo("p3", "Page Three", Instant.now())
+                new PageInfo("p1", "Page One", Instant.now(), Instant.now()),
+                new PageInfo("p2", "Page Two", Instant.now(), Instant.now()),
+                new PageInfo("p3", "Page Three", Instant.now(), Instant.now())
         );
 
         try (

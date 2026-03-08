@@ -44,9 +44,12 @@ public class PageLister {
     }
 
     private PageInfo toPageInfo(PageResponse response) {
-        var created = response.createdDateTime() != null
-                ? Instant.parse(response.createdDateTime())
-                : null;
-        return new PageInfo(response.id(), response.title(), created);
-    }
+            var created = response.createdDateTime() != null
+                    ? Instant.parse(response.createdDateTime())
+                    : null;
+            var lastModified = response.lastModifiedDateTime() != null
+                    ? Instant.parse(response.lastModifiedDateTime())
+                    : null;
+            return new PageInfo(response.id(), response.title(), created, lastModified);
+        }
 }
