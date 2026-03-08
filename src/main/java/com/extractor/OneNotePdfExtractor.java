@@ -3,7 +3,9 @@ package com.extractor;
 import com.extractor.auth.AuthModule;
 import com.extractor.cli.CliArgs;
 import com.extractor.client.GraphClientWrapper;
+import com.extractor.model.ExportResult;
 import com.extractor.model.FailedPage;
+import com.extractor.model.PageExportOutcome;
 import com.extractor.model.PageInfo;
 import com.extractor.model.SectionInfo;
 import com.extractor.page.PageLister;
@@ -21,6 +23,10 @@ import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.Callable;
+import java.util.concurrent.ConcurrentLinkedQueue;
+import java.util.concurrent.Semaphore;
+import java.util.concurrent.StructuredTaskScope;
+import java.util.concurrent.StructuredTaskScope.Subtask;
 
 /**
  * Entry point for the OneNote PDF Extractor CLI tool.
@@ -45,6 +51,10 @@ public class OneNotePdfExtractor implements Callable<Integer> {
 
     @Option(names = "--output-dir", description = "Output directory (default: ./onenote-export)")
     private Path outputDir;
+    @Option(names = "--concurrency",
+            description = "Max concurrent page exports (default: ${DEFAULT-VALUE})",
+            defaultValue = "4")
+    private int concurrency;
 
     public static void main(String[] args) {
         var exitCode = new CommandLine(new OneNotePdfExtractor()).execute(args);
@@ -142,37 +152,96 @@ public class OneNotePdfExtractor implements Callable<Integer> {
             return 1;
         }
 
-        // 7. Export each page
-        var successCount = 0;
-        var failures = new ArrayList<FailedPage>();
-
+        // 7. Export pages concurrently and report summary
         try {
+            var result = exportPagesConcurrently(pages, pdfDownloader, pdfWriter, reporter, cliArgs.getConcurrency());
+            reporter.reportSummary(result.totalPages(), result.successCount(), result.failures());
+            return result.failures().isEmpty() ? 0 : 1;
+        } catch (RuntimeException e) {
+            if (e.getCause() instanceof InterruptedException) {
+                System.err.println("Error: Export pipeline interrupted - " + e.getMessage());
+                Thread.currentThread().interrupt();
+                return 1;
+            }
+            throw e;
+        } finally {
+            reporter.close();
+        }
+    }
+
+    /**
+     * Exports pages concurrently using virtual threads and structured concurrency.
+     * Each page is processed in its own virtual thread, throttled by a semaphore.
+     * Returns an ExportResult summarizing successes and failures.
+     */
+    ExportResult exportPagesConcurrently(
+            List<PageInfo> pages,
+            PdfDownloader downloader,
+            PdfWriter writer,
+            ProgressReporter reporter,
+            int concurrencyLevel
+    ) {
+        var totalPages = pages.size();
+        var semaphore = new Semaphore(concurrencyLevel);
+        var outcomes = new ConcurrentLinkedQueue<PageExportOutcome>();
+
+        try (var scope = StructuredTaskScope.open()) {
+            var subtasks = new ArrayList<Subtask<PageExportOutcome>>();
+
             for (var i = 0; i < totalPages; i++) {
                 var page = pages.get(i);
                 var current = i + 1;
                 var title = page.title() != null ? page.title() : page.pageId();
 
-                reporter.reportPageStart(current, totalPages, title);
-
-                try {
-                    var pdfBytes = pdfDownloader.downloadPageAsPdf(page.pageId());
-                    var filename = pdfWriter.writePdf(page.title(), page.pageId(), pdfBytes);
-                    reporter.reportPageSuccess(current, totalPages, title, filename);
-                    successCount++;
-                } catch (Exception e) {
-                    var errorMsg = e.getMessage() != null ? e.getMessage() : e.getClass().getSimpleName();
-                    reporter.reportPageFailure(current, totalPages, title, page.pageId(), errorMsg);
-                    failures.add(new FailedPage(page.pageId(), title, errorMsg));
-                }
+                var subtask = scope.<PageExportOutcome>fork(() -> {
+                    try {
+                        semaphore.acquire();
+                        try {
+                            reporter.reportPageStart(current, totalPages, title);
+                            var pdfBytes = downloader.downloadPageAsPdf(page.pageId());
+                            var filename = writer.writePdf(title, page.pageId(), pdfBytes);
+                            reporter.reportPageSuccess(current, totalPages, title, filename);
+                            return new PageExportOutcome.Success(title, filename);
+                        } catch (Exception e) {
+                            var errorMsg = e.getMessage() != null ? e.getMessage() : e.getClass().getSimpleName();
+                            reporter.reportPageFailure(current, totalPages, title, page.pageId(), errorMsg);
+                            return new PageExportOutcome.Failure(page.pageId(), title, errorMsg);
+                        } finally {
+                            semaphore.release();
+                        }
+                    } catch (InterruptedException e) {
+                        var errorMsg = "Interrupted while waiting for semaphore";
+                        reporter.reportPageFailure(current, totalPages, title, page.pageId(), errorMsg);
+                        return new PageExportOutcome.Failure(page.pageId(), title, errorMsg);
+                    }
+                });
+                subtasks.add(subtask);
             }
 
-            // 8. Report summary
-            reporter.reportSummary(totalPages, successCount, failures);
-        } finally {
-            reporter.close();
+            scope.join();
+
+            for (var subtask : subtasks) {
+                outcomes.add(subtask.get());
+            }
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            throw new RuntimeException("Export pipeline interrupted", e);
         }
 
-        return failures.isEmpty() ? 0 : 1;
+        // Aggregate results using pattern matching on the sealed interface
+        var successCount = 0;
+        var failures = new ArrayList<FailedPage>();
+
+        for (var outcome : outcomes) {
+            switch (outcome) {
+                case PageExportOutcome.Success _ -> successCount++;
+                case PageExportOutcome.Failure f -> failures.add(
+                        new FailedPage(f.pageId(), f.pageTitle(), f.errorMessage())
+                );
+            }
+        }
+
+        return new ExportResult(totalPages, successCount, failures.size(), failures);
     }
 
     /**
@@ -191,6 +260,7 @@ public class OneNotePdfExtractor implements Callable<Integer> {
         if (outputDir != null) {
             args.setOutputDir(outputDir);
         }
+        args.setConcurrency(concurrency);
         return args;
     }
 }

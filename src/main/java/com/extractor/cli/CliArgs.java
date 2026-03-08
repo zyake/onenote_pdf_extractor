@@ -11,6 +11,7 @@ public class CliArgs {
     private String sectionName;
     private Path outputDir;
     private boolean help;
+    private int concurrency = 4;
 
     private static final Path DEFAULT_OUTPUT_DIR = Path.of("./onenote-export");
 
@@ -31,6 +32,10 @@ public class CliArgs {
     public void validate() throws IllegalArgumentException {
         if (help) {
             return;
+        }
+        if (concurrency < 1 || concurrency > 20) {
+            throw new IllegalArgumentException(
+                "--concurrency must be between 1 and 20 (inclusive).");
         }
         if (isBlank(sectionId)) {
             if (isBlank(notebookName) || isBlank(sectionName)) {
@@ -58,4 +63,7 @@ public class CliArgs {
 
     public boolean isHelp() { return help; }
     public void setHelp(boolean help) { this.help = help; }
+
+    public int getConcurrency() { return concurrency; }
+    public void setConcurrency(int concurrency) { this.concurrency = concurrency; }
 }

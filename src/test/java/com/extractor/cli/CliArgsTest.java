@@ -144,4 +144,104 @@ class CliArgsTest {
 
         assertThatNoException().isThrownBy(args::validate);
     }
+
+    // --- Requirement 2.2: default concurrency level ---
+
+    @Test
+    void defaultConcurrencyIsFour() {
+        var args = new CliArgs();
+
+        assertThat(args.getConcurrency()).isEqualTo(4);
+    }
+
+    // --- Requirement 2.5: valid concurrency values ---
+
+    @Test
+    void acceptsConcurrencyOf1() {
+        var args = new CliArgs();
+        args.setSectionId("abc-123");
+        args.setConcurrency(1);
+
+        assertThatNoException().isThrownBy(args::validate);
+        assertThat(args.getConcurrency()).isEqualTo(1);
+    }
+
+    @Test
+    void acceptsConcurrencyOf20() {
+        var args = new CliArgs();
+        args.setSectionId("abc-123");
+        args.setConcurrency(20);
+
+        assertThatNoException().isThrownBy(args::validate);
+        assertThat(args.getConcurrency()).isEqualTo(20);
+    }
+
+    @Test
+    void acceptsConcurrencyOf10() {
+        var args = new CliArgs();
+        args.setSectionId("abc-123");
+        args.setConcurrency(10);
+
+        assertThatNoException().isThrownBy(args::validate);
+        assertThat(args.getConcurrency()).isEqualTo(10);
+    }
+
+    // --- Requirement 2.3: reject concurrency < 1 ---
+
+    @Test
+    void rejectsConcurrencyOfZero() {
+        var args = new CliArgs();
+        args.setSectionId("abc-123");
+        args.setConcurrency(0);
+
+        assertThatThrownBy(args::validate)
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("--concurrency");
+    }
+
+    @Test
+    void rejectsConcurrencyOfNegativeValue() {
+        var args = new CliArgs();
+        args.setSectionId("abc-123");
+        args.setConcurrency(-5);
+
+        assertThatThrownBy(args::validate)
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("--concurrency");
+    }
+
+    // --- Requirement 2.4: reject concurrency > 20 ---
+
+    @Test
+    void rejectsConcurrencyOf21() {
+        var args = new CliArgs();
+        args.setSectionId("abc-123");
+        args.setConcurrency(21);
+
+        assertThatThrownBy(args::validate)
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("--concurrency");
+    }
+
+    @Test
+    void rejectsConcurrencyOf100() {
+        var args = new CliArgs();
+        args.setSectionId("abc-123");
+        args.setConcurrency(100);
+
+        assertThatThrownBy(args::validate)
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("--concurrency");
+    }
+
+    // --- Requirement 1.6 + 2.3/2.4: help flag bypasses concurrency validation ---
+
+    @Test
+    void helpFlagBypassesConcurrencyValidation() {
+        var args = new CliArgs();
+        args.setHelp(true);
+        args.setConcurrency(0);
+
+        assertThatNoException().isThrownBy(args::validate);
+    }
 }

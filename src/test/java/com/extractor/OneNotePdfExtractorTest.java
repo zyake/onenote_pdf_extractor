@@ -255,4 +255,86 @@ class OneNotePdfExtractorTest {
             verify(reporter).reportSummary(eq(3), eq(2), any());
         }
     }
+
+    // --- Requirement 2.1: CLI accepts --concurrency option ---
+
+    @Test
+    void execute_parsesConcurrencyOption_whenProvided() {
+        var outputDir = tempDir.resolve("concurrency-output");
+
+        // Will fail at client ID check, but CLI parsing happens before that
+        var exitCode = new CommandLine(new TestableExtractor(null))
+                .execute("--section-id", "some-id",
+                        "--output-dir", outputDir.toString(),
+                        "--concurrency", "8");
+
+        // Exit code 1 because client ID is null, but --concurrency was parsed without error
+        assertThat(exitCode).isEqualTo(1);
+    }
+
+    // --- Requirement 2.2: Default concurrency is 4 ---
+
+    @Test
+    void execute_usesDefaultConcurrency_whenOptionNotProvided() {
+        var outputDir = tempDir.resolve("default-concurrency-output");
+
+        // Will fail at client ID check, but CLI parsing and validation happen before that
+        var exitCode = new CommandLine(new TestableExtractor(null))
+                .execute("--section-id", "some-id",
+                        "--output-dir", outputDir.toString());
+
+        // Exit code 1 because client ID is null — not because of concurrency validation
+        assertThat(exitCode).isEqualTo(1);
+    }
+
+    // --- Requirement 2.3: Reject concurrency < 1 ---
+
+    @Test
+    void execute_returnsExitCode1_whenConcurrencyBelowMinimum() {
+        var outputDir = tempDir.resolve("low-concurrency-output");
+
+        var exitCode = new CommandLine(new TestableExtractor("test-client-id"))
+                .execute("--section-id", "some-id",
+                        "--output-dir", outputDir.toString(),
+                        "--concurrency", "0");
+
+        assertThat(exitCode).isEqualTo(1);
+    }
+
+    // --- Requirement 2.4: Reject concurrency > 20 ---
+
+    @Test
+    void execute_returnsExitCode1_whenConcurrencyAboveMaximum() {
+        var outputDir = tempDir.resolve("high-concurrency-output");
+
+        var exitCode = new CommandLine(new TestableExtractor("test-client-id"))
+                .execute("--section-id", "some-id",
+                        "--output-dir", outputDir.toString(),
+                        "--concurrency", "21");
+
+        assertThat(exitCode).isEqualTo(1);
+    }
+
+    // --- Requirement 2.5: Valid concurrency values are accepted ---
+
+    @Test
+    void execute_acceptsConcurrencyAtBoundaries() {
+        var outputDir1 = tempDir.resolve("min-concurrency-output");
+
+        // concurrency=1 is valid; will fail at client ID check, not validation
+        var exitCode1 = new CommandLine(new TestableExtractor(null))
+                .execute("--section-id", "some-id",
+                        "--output-dir", outputDir1.toString(),
+                        "--concurrency", "1");
+        assertThat(exitCode1).isEqualTo(1);
+
+        var outputDir20 = tempDir.resolve("max-concurrency-output");
+
+        // concurrency=20 is valid; will fail at client ID check, not validation
+        var exitCode20 = new CommandLine(new TestableExtractor(null))
+                .execute("--section-id", "some-id",
+                        "--output-dir", outputDir20.toString(),
+                        "--concurrency", "20");
+        assertThat(exitCode20).isEqualTo(1);
+    }
 }

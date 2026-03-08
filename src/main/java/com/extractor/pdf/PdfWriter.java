@@ -3,8 +3,8 @@ package com.extractor.pdf;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.util.HashSet;
 import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * Writes PDF bytes to disk with filename sanitization and collision handling.
@@ -15,7 +15,7 @@ public class PdfWriter {
     private static final String PDF_EXTENSION = ".pdf";
 
     private final Path outputDirectory;
-    private final Set<String> usedFilenames = new HashSet<>();
+    private final Set<String> usedFilenames = ConcurrentHashMap.newKeySet();
 
     public PdfWriter(Path outputDirectory) {
         this.outputDirectory = outputDirectory;
@@ -24,7 +24,7 @@ public class PdfWriter {
     /**
      * Write PDF bytes to a file. Returns the final filename used.
      */
-    public String writePdf(String pageTitle, String pageId, byte[] pdfContent) throws IOException {
+    public synchronized String writePdf(String pageTitle, String pageId, byte[] pdfContent) throws IOException {
         var sanitized = sanitizeFilename(pageTitle);
         if (sanitized.isEmpty()) {
             sanitized = sanitizeFilename(pageId);
@@ -38,9 +38,9 @@ public class PdfWriter {
         var filename = sanitized + PDF_EXTENSION;
         filename = resolveCollision(filename);
 
-        usedFilenames.add(filename);
         var filePath = outputDirectory.resolve(filename);
         Files.write(filePath, pdfContent);
+        usedFilenames.add(filename);
 
         return filename;
     }

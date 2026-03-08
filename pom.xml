@@ -118,6 +118,9 @@
                 <configuration>
                     <source>25</source>
                     <target>25</target>
+                    <compilerArgs>
+                        <arg>--enable-preview</arg>
+                    </compilerArgs>
                     <annotationProcessorPaths>
                         <path>
                             <groupId>info.picocli</groupId>
@@ -135,6 +138,7 @@
                 <version>3.5.2</version>
                 <configuration>
                     <argLine>
+                        --enable-preview
                         -Dnet.bytebuddy.experimental=true
                         --add-opens java.base/java.lang=ALL-UNNAMED
                         --add-opens java.base/java.lang.reflect=ALL-UNNAMED

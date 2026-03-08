@@ -13,6 +13,8 @@ import java.util.List;
 /**
  * Displays progress to stdout and writes to a log file.
  * Supports reporting page export start, success, failure, and a final summary.
+ * Thread-safe: {@code output} and {@code reportSummary} are synchronized to prevent
+ * interleaved lines under concurrent access.
  */
 public class ProgressReporter {
 
@@ -27,7 +29,6 @@ public class ProgressReporter {
      */
     public ProgressReporter(Path logFilePath) throws IOException {
         this.logFilePath = logFilePath;
-        // Ensure parent directories exist
         var parent = logFilePath.getParent();
         if (parent != null) {
             Files.createDirectories(parent);
@@ -67,8 +68,9 @@ public class ProgressReporter {
 
     /**
      * Report final summary showing success/failure counts and listing failed pages.
+     * Synchronized to ensure the multi-line summary block is atomic under concurrent access.
      */
-    public void reportSummary(int totalPages, int successCount, List<FailedPage> failures) {
+    public synchronized void reportSummary(int totalPages, int successCount, List<FailedPage> failures) {
         var failureCount = failures != null ? failures.size() : 0;
 
         output("");
@@ -88,8 +90,9 @@ public class ProgressReporter {
 
     /**
      * Writes a message to both stdout and the log file.
+     * Synchronized to prevent interleaved lines under concurrent access.
      */
-    private void output(String message) {
+    private synchronized void output(String message) {
         System.out.println(message);
         logWriter.println(message);
     }

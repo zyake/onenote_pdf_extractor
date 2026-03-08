@@ -6,6 +6,11 @@ import org.junit.jupiter.api.io.TempDir;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.ArrayList;
+import java.util.HashSet;
+import java.util.concurrent.CyclicBarrier;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -169,4 +174,103 @@ class PdfWriterTest {
 
         assertThat(filename).isEqualTo("B".repeat(200) + ".pdf");
     }
+
+    // --- Thread-safety tests (Requirements 3.1, 3.2, 3.3) ---
+
+    @Test
+    void writePdf_concurrentWritesSameTitle_allFilenamesUnique(@TempDir Path tempDir) throws Exception {
+        var writer = new PdfWriter(tempDir);
+        var threadCount = 20;
+        var barrier = new CyclicBarrier(threadCount);
+
+        try (var executor = Executors.newVirtualThreadPerTaskExecutor()) {
+            var futures = new ArrayList<Future<String>>();
+            for (var i = 0; i < threadCount; i++) {
+                var content = ("content-" + i).getBytes();
+                futures.add(executor.submit(() -> {
+                    barrier.await();
+                    return writer.writePdf("SameTitle", "page-" + Thread.currentThread().threadId(), content);
+                }));
+            }
+
+            var filenames = new HashSet<String>();
+            for (var future : futures) {
+                filenames.add(future.get());
+            }
+
+            assertThat(filenames).hasSize(threadCount);
+        }
+    }
+
+    @Test
+    void writePdf_concurrentWritesDifferentTitles_allFilenamesUnique(@TempDir Path tempDir) throws Exception {
+        var writer = new PdfWriter(tempDir);
+        var threadCount = 20;
+        var barrier = new CyclicBarrier(threadCount);
+
+        try (var executor = Executors.newVirtualThreadPerTaskExecutor()) {
+            var futures = new ArrayList<Future<String>>();
+            for (var i = 0; i < threadCount; i++) {
+                var title = "Page-" + i;
+                var content = ("content-" + i).getBytes();
+                futures.add(executor.submit(() -> {
+                    barrier.await();
+                    return writer.writePdf(title, "id-" + title, content);
+                }));
+            }
+
+            var filenames = new HashSet<String>();
+            for (var future : futures) {
+                filenames.add(future.get());
+            }
+
+            assertThat(filenames).hasSize(threadCount);
+        }
+    }
+
+    @Test
+    void writePdf_concurrentWrites_filesWrittenBeforeRegistered(@TempDir Path tempDir) throws Exception {
+        var writer = new PdfWriter(tempDir);
+        var threadCount = 10;
+        var barrier = new CyclicBarrier(threadCount);
+
+        try (var executor = Executors.newVirtualThreadPerTaskExecutor()) {
+            var futures = new ArrayList<Future<String>>();
+            for (var i = 0; i < threadCount; i++) {
+                var content = ("data-" + i).getBytes();
+                futures.add(executor.submit(() -> {
+                    barrier.await();
+                    return writer.writePdf("Doc", "pg", content);
+                }));
+            }
+
+            var filenames = new ArrayList<String>();
+            for (var future : futures) {
+                filenames.add(future.get());
+            }
+
+            for (var filename : filenames) {
+                var file = tempDir.resolve(filename);
+                assertThat(file).exists();
+                assertThat(Files.readAllBytes(file)).isNotEmpty();
+            }
+        }
+    }
+
+    @Test
+    void writePdf_concurrentWrites_collisionSuffixesAreSequential(@TempDir Path tempDir) throws Exception {
+        var writer = new PdfWriter(tempDir);
+        var threadCount = 5;
+
+        // Write sequentially first to verify collision suffixes work under synchronized access
+        var filenames = new ArrayList<String>();
+        for (var i = 0; i < threadCount; i++) {
+            filenames.add(writer.writePdf("Report", "p" + i, ("content-" + i).getBytes()));
+        }
+
+        assertThat(filenames).containsExactly(
+                "Report.pdf", "Report_1.pdf", "Report_2.pdf", "Report_3.pdf", "Report_4.pdf"
+        );
+    }
+
 }

@@ -6,7 +6,7 @@ If a page contains an embedded PDF attachment (e.g., an academic paper), the too
 
 ## Prerequisites
 
-- Java 17+
+- Java 25+ (uses preview features: StructuredTaskScope, unnamed variables)
 - Maven 3.6+
 - An Azure AD app registration with `Notes.Read` and `Notes.Read.All` permissions
 
@@ -32,19 +32,23 @@ mvn clean package -DskipTests
 export ONENOTE_CLIENT_ID="your-client-id"
 
 # By notebook and section name
-java -jar target/onenote-pdf-extractor-1.0-SNAPSHOT.jar \
+java --enable-preview -jar target/onenote-pdf-extractor-1.0-SNAPSHOT.jar \
   --notebook "My Notebook" \
   --section "My Section"
 
 # By section ID directly
-java -jar target/onenote-pdf-extractor-1.0-SNAPSHOT.jar \
+java --enable-preview -jar target/onenote-pdf-extractor-1.0-SNAPSHOT.jar \
   --section-id "your-section-id"
 
-# Custom output directory
-java -jar target/onenote-pdf-extractor-1.0-SNAPSHOT.jar \
+# Custom output directory and concurrency level
+java --enable-preview -jar target/onenote-pdf-extractor-1.0-SNAPSHOT.jar \
   --notebook "My Notebook" \
   --section "My Section" \
-  --output-dir ./my-pdfs
+  --output-dir ./my-pdfs \
+  --concurrency 8
+
+# Or use the launcher script (passes --enable-preview automatically)
+./onenote-export.sh --notebook "My Notebook" --section "My Section"
 ```
 
 On first run, the tool displays a device code and URL. Open the URL in a browser, enter the code, and sign in with your Microsoft account.
@@ -57,6 +61,7 @@ On first run, the tool displays a device code and URL. Open the URL in a browser
 | `--section` | Section name within the notebook |
 | `--section-id` | Direct section ID (overrides `--notebook`/`--section`) |
 | `--output-dir` | Output directory (default: `./onenote-export`) |
+| `--concurrency` | Max concurrent page exports, 1–20 (default: `4`) |
 | `--help` | Show help |
 
 ## Output
