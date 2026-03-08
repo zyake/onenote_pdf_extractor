@@ -1,5 +1,5 @@
 {
-  "app": "python3 app.py",
+  "app": "npx ts-node bin/app.ts",
   "context": {
     "env": "dev"
   }
