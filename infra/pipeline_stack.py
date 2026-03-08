@@ -14,7 +14,6 @@ from aws_cdk import (
     aws_cloudwatch as cloudwatch,
     aws_s3 as s3,
     aws_ssm as ssm,
-    aws_ecr as ecr,
 )
 
 
@@ -99,23 +98,14 @@ class PipelineStack(Stack):
             tier=ssm.ParameterTier.STANDARD,
         )
 
-        # --- ECR repository reference for Lambda container image ---
-        ecr_repo = ecr.Repository(
-            self,
-            "LambdaImageRepo",
-            repository_name=f"onenote-pipeline-{env_name}",
-            removal_policy=config["removal_policy"],
-        )
-
-        # --- Lambda function (container image) ---
-        pipeline_function = lambda_.DockerImageFunction(
+        # --- Lambda function (Java 21 managed runtime, fat JAR) ---
+        pipeline_function = lambda_.Function(
             self,
             "PipelineFunction",
             function_name=f"onenote-pipeline-{env_name}",
-            code=lambda_.DockerImageCode.from_ecr(
-                repository=ecr_repo,
-                tag_or_digest="latest",
-            ),
+            runtime=lambda_.Runtime.JAVA_21,
+            handler="com.extractor.pipeline.PipelineHandler::handleRequest",
+            code=lambda_.Code.from_asset("../target/onenote-pdf-extractor-1.0-SNAPSHOT.jar"),
             memory_size=config["lambda_memory"],
             timeout=Duration.minutes(config["lambda_timeout_minutes"]),
             reserved_concurrent_executions=1,
@@ -195,6 +185,5 @@ class PipelineStack(Stack):
         cdk.CfnOutput(self, "PdfBucketName", value=pdf_bucket.bucket_name)
         cdk.CfnOutput(self, "ExportTrackerTableName", value=export_tracker.table_name)
         cdk.CfnOutput(self, "LambdaFunctionName", value=pipeline_function.function_name)
-        cdk.CfnOutput(self, "EcrRepositoryUri", value=ecr_repo.repository_uri)
         cdk.CfnOutput(self, "ScheduleRuleName", value=rule.rule_name)
         cdk.CfnOutput(self, "ErrorAlarmName", value=alarm.alarm_name)

@@ -24,15 +24,17 @@ import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 import java.util.concurrent.Semaphore;
-import java.util.concurrent.StructuredTaskScope;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 
 /**
  * AWS Lambda entry point for the OneNote PDF export pipeline.
  * Orchestrates: credential loading → auth → page listing → concurrent export → metrics → reporting.
  *
- * <p>Uses structured concurrency with virtual threads and a configurable semaphore
+ * <p>Uses virtual threads with an ExecutorService and a configurable semaphore
  * for concurrent page processing. Individual page failures do not abort the run.</p>
  *
  * <p>Validates: Requirements 1.4, 3.1, 6.2, 8.1, 8.2, 8.3</p>
@@ -143,7 +145,7 @@ public class PipelineHandler implements RequestHandler<ScheduledEvent, PipelineR
     }
 
     /**
-     * Processes all pages concurrently using structured concurrency with virtual threads.
+     * Processes all pages concurrently using virtual threads.
      * A semaphore limits the number of concurrent page-processing threads.
      * Individual page failures are captured without aborting the run.
      * Package-private for testing.
@@ -157,22 +159,25 @@ public class PipelineHandler implements RequestHandler<ScheduledEvent, PipelineR
         var failures = Collections.synchronizedList(new ArrayList<FailedPage>());
         var semaphore = new Semaphore(concurrencyLimit);
 
-        try (var scope = StructuredTaskScope.open()) {
+        try (var executor = Executors.newVirtualThreadPerTaskExecutor()) {
             for (var page : pages) {
-                scope.fork(() -> {
-                    semaphore.acquire();
+                executor.submit(() -> {
                     try {
-                        processPage(page, notebookName, sectionName, pdfDownloader,
-                                notebookLmUploader, exported, skipped, uploadedToNotebookLm, failures);
-                    } finally {
-                        semaphore.release();
+                        semaphore.acquire();
+                        try {
+                            processPage(page, notebookName, sectionName, pdfDownloader,
+                                    notebookLmUploader, exported, skipped, uploadedToNotebookLm, failures);
+                        } finally {
+                            semaphore.release();
+                        }
+                    } catch (InterruptedException e) {
+                        Thread.currentThread().interrupt();
+                        failures.add(new FailedPage(page.pageId(), page.title(), "Interrupted"));
                     }
-                    return null;
                 });
             }
-            scope.join();
-        } catch (StructuredTaskScope.FailedException e) {
-            throw new RuntimeException("Pipeline page processing failed", e);
+            executor.shutdown();
+            executor.awaitTermination(15, TimeUnit.MINUTES);
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
             throw new RuntimeException("Pipeline interrupted during page processing", e);

@@ -96,13 +96,6 @@
             <artifactId>aws-lambda-java-events</artifactId>
             <version>3.14.0</version>
         </dependency>
-        <!-- AWS Lambda Runtime Interface Client (RIC) for custom runtime bootstrap -->
-        <dependency>
-            <groupId>com.amazonaws</groupId>
-            <artifactId>aws-lambda-java-runtime-interface-client</artifactId>
-            <version>2.6.0</version>
-        </dependency>
-
         <!-- Google Auth Library for service account credentials -->
         <dependency>
             <groupId>com.google.auth</groupId>
