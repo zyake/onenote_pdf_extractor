@@ -4,11 +4,11 @@
 
 This design migrates the existing OneNote PDF Extractor CLI tool to an automated, serverless pipeline on AWS. The current tool uses interactive OAuth2 device code flow, writes PDFs to local disk, and runs as a one-shot CLI invocation. The new pipeline replaces interactive auth with client credentials flow, stores PDFs in S3, tracks exported pages in DynamoDB for deduplication, uploads PDFs to Google NotebookLM, and runs on a schedule via EventBridge.
 
-The Java 25 application is packaged as a container image and executed on AWS Lambda (or ECS Fargate for longer runs). The existing components — `GraphClientWrapper`, `PdfDownloader`, `PdfWriter`, `PageLister`, `SectionResolver` — are adapted rather than rewritten. New components handle DynamoDB deduplication, S3 storage, NotebookLM upload, and non-interactive authentication.
+The Java 25 application is packaged as a fat JAR (via Maven Shade plugin) and deployed to AWS Lambda using the managed Java runtime. The existing components — `GraphClientWrapper`, `PdfDownloader`, `PdfWriter`, `PageLister`, `SectionResolver` — are adapted rather than rewritten. New components handle DynamoDB deduplication, S3 storage, NotebookLM upload, and non-interactive authentication.
 
 ### Key Design Decisions
 
-1. **AWS Lambda with container image** — The export pipeline is I/O-bound (HTTP calls to Graph API, S3, DynamoDB, Google API). Lambda supports up to 15 minutes of execution and container images up to 10 GB, which is sufficient for the Java 25 runtime. If sections exceed 15 minutes, the design supports an ECS Fargate fallback.
+1. **AWS Lambda with fat JAR** — The export pipeline is I/O-bound (HTTP calls to Graph API, S3, DynamoDB, Google API). Lambda supports up to 15 minutes of execution. The application is deployed as a fat JAR using the managed Java runtime, keeping deployment simple with no container build step.
 
 2. **Client credentials flow replaces device code flow** — Microsoft Graph supports app-only access via client credentials with `Sites.Read.All` or `Notes.Read.All` application permissions (requires Azure AD admin consent). This eliminates interactive prompts entirely.
 
@@ -23,7 +23,7 @@ The Java 25 application is packaged as a container image and executed on AWS Lam
 ```mermaid
 flowchart TB
     subgraph AWS
-        EB[EventBridge Scheduler<br/>Cron Rule] -->|triggers| LF[Lambda Function<br/>Java 25 Container]
+        EB[EventBridge Scheduler<br/>Cron Rule] -->|triggers| LF[Lambda Function<br/>Java 25 Fat JAR]
         LF -->|read credentials| SSM[SSM Parameter Store<br/>SecureString]
         LF -->|check/update dedup| DDB[DynamoDB<br/>ExportTracker Table]
         LF -->|upload PDFs| S3[S3 Bucket<br/>PDF Store]

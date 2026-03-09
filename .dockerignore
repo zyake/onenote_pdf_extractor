@@ -1,0 +1,15 @@
+.git
+.kiro
+.vscode
+docs
+src
+infra
+*.md
+.gitignore
+.jqwik-database
+dependency-reduced-pom.xml
+target/classes
+target/test-classes
+target/maven-*
+target/surefire-*
+target/original-*
