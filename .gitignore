@@ -16,3 +16,6 @@ onenote-export/
 
 # Logs
 *.log
+
+# Node modules (CDK infra)
+node_modules/

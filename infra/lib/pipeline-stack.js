@@ -1,23 +1,14 @@
-import { Construct } from "constructs";
-import * as cdk from "aws-cdk-lib";
-import * as dynamodb from "aws-cdk-lib/aws-dynamodb";
-import * as events from "aws-cdk-lib/aws-events";
-import * as targets from "aws-cdk-lib/aws-events-targets";
-import * as iam from "aws-cdk-lib/aws-iam";
-import * as lambda from "aws-cdk-lib/aws-lambda";
-import * as cloudwatch from "aws-cdk-lib/aws-cloudwatch";
-import * as s3 from "aws-cdk-lib/aws-s3";
-import * as ssm from "aws-cdk-lib/aws-ssm";
+const cdk = require("aws-cdk-lib");
+const dynamodb = require("aws-cdk-lib/aws-dynamodb");
+const events = require("aws-cdk-lib/aws-events");
+const targets = require("aws-cdk-lib/aws-events-targets");
+const iam = require("aws-cdk-lib/aws-iam");
+const lambda = require("aws-cdk-lib/aws-lambda");
+const cloudwatch = require("aws-cdk-lib/aws-cloudwatch");
+const s3 = require("aws-cdk-lib/aws-s3");
+const ssm = require("aws-cdk-lib/aws-ssm");
 
-interface EnvConfig {
-  schedule: string;
-  lambdaMemory: number;
-  lambdaTimeoutMinutes: number;
-  removalPolicy: cdk.RemovalPolicy;
-  cwNamespace: string;
-}
-
-const ENV_CONFIG: Record<string, EnvConfig> = {
+const ENV_CONFIG = {
   dev: {
     schedule: "rate(1 day)",
     lambdaMemory: 1024,
@@ -34,12 +25,8 @@ const ENV_CONFIG: Record<string, EnvConfig> = {
   },
 };
 
-interface PipelineStackProps extends cdk.StackProps {
-  envName: string;
-}
-
-export class PipelineStack extends cdk.Stack {
-  constructor(scope: Construct, id: string, props: PipelineStackProps) {
+class PipelineStack extends cdk.Stack {
+  constructor(scope, id, props) {
     super(scope, id, props);
 
     const config = ENV_CONFIG[props.envName] ?? ENV_CONFIG["dev"];
@@ -164,3 +151,5 @@ export class PipelineStack extends cdk.Stack {
     new cdk.CfnOutput(this, "ErrorAlarmName", { value: `onenote-pipeline-errors-${props.envName}` });
   }
 }
+
+module.exports = { PipelineStack };

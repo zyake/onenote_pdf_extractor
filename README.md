@@ -71,9 +71,142 @@ On first run, the tool displays a device code and URL. Open the URL in a browser
 - Duplicate titles get numeric suffixes (`_1`, `_2`, etc.)
 - A log file (`export.log`) is created in the output directory
 
+## AWS Automated Pipeline
+
+The project includes an automated pipeline that runs on AWS Lambda on a schedule, exporting OneNote pages to S3 and uploading them to Google NotebookLM. See [docs/aws-architecture.md](docs/aws-architecture.md) for architecture diagrams.
+
+### Prerequisites
+
+- AWS CLI configured with appropriate credentials
+- Node.js 18+ and npm (for CDK)
+- AWS CDK CLI (`npm install -g aws-cdk`)
+- An Azure AD app registration with **application** permissions (not delegated)
+- A Google Cloud service account with Drive API access
+
+### Step 1: Azure AD App Registration (Microsoft Graph)
+
+1. Go to [Azure Portal](https://portal.azure.com) → App registrations → New registration
+2. Name: `OneNote Pipeline`
+3. Account type: "Accounts in this organizational directory only" (single tenant)
+4. After registration, note the **Application (client) ID** and **Directory (tenant) ID** from the Overview page
+5. Go to Certificates & secrets → New client secret → copy the **Value** (not the Secret ID)
+6. Go to API permissions → Add permission → Microsoft Graph → **Application permissions** → add `Notes.Read.All`
+7. Click "Grant admin consent" (requires Azure AD admin)
+
+### Step 2: Google Cloud Service Account (NotebookLM)
+
+1. Go to [Google Cloud Console](https://console.cloud.google.com) → IAM & Admin → Service Accounts
+2. Create a service account (or use an existing one)
+3. Go to Keys → Add Key → Create new key → JSON
+4. Download the JSON key file — you'll paste its contents into SSM
+5. Enable the Google Drive API in your project
+6. Share your NotebookLM project/folder with the service account email (e.g. `name@project.iam.gserviceaccount.com`)
+7. Note your NotebookLM project ID from the notebook URL
+
+### Step 3: Find Your OneNote Section ID
+
+Use the Graph API Explorer or a curl call to list your sections:
+
+```bash
+curl -H "Authorization: Bearer {token}" \
+  "https://graph.microsoft.com/v1.0/me/onenote/sections?\$select=id,displayName"
+```
+
+Or reuse the `--section-id` value from your CLI usage.
+
+### Step 4: Build the Fat JAR
+
+```bash
+mvn clean package -DskipTests
+```
+
+### Step 5: Deploy the CDK Stack
+
+```bash
+# Install CDK dependencies
+npm install --prefix infra
+
+# Deploy to dev
+npx cdk deploy --context env=dev
+
+# Or deploy to prod
+npx cdk deploy --context env=prod
+```
+
+### Step 6: Configure SSM Parameters
+
+After the first deploy creates placeholder parameters, replace them with real values:
+
+```bash
+ENV=dev  # or prod
+
+aws ssm put-parameter \
+  --name "/onenote-pipeline/$ENV/ms-client-id" \
+  --value "your-azure-app-client-id" \
+  --type SecureString --overwrite
+
+aws ssm put-parameter \
+  --name "/onenote-pipeline/$ENV/ms-client-secret" \
+  --value "your-azure-app-client-secret" \
+  --type SecureString --overwrite
+
+aws ssm put-parameter \
+  --name "/onenote-pipeline/$ENV/ms-tenant-id" \
+  --value "your-azure-tenant-id" \
+  --type SecureString --overwrite
+
+aws ssm put-parameter \
+  --name "/onenote-pipeline/$ENV/google-service-account-json" \
+  --value '{"type":"service_account","project_id":"...","private_key":"..."}' \
+  --type SecureString --overwrite
+
+aws ssm put-parameter \
+  --name "/onenote-pipeline/$ENV/notebooklm-project-id" \
+  --value "your-notebooklm-project-id" \
+  --type SecureString --overwrite
+
+aws ssm put-parameter \
+  --name "/onenote-pipeline/$ENV/section-id" \
+  --value "your-onenote-section-id" \
+  --type String --overwrite
+```
+
+### SSM Parameter Reference
+
+| Parameter | Type | Source |
+|---|---|---|
+| `ms-client-id` | SecureString | Azure AD → App registration → Overview |
+| `ms-client-secret` | SecureString | Azure AD → App registration → Certificates & secrets |
+| `ms-tenant-id` | SecureString | Azure AD → App registration → Overview |
+| `google-service-account-json` | SecureString | Google Cloud → Service account → JSON key |
+| `notebooklm-project-id` | SecureString | NotebookLM notebook URL |
+| `section-id` | String | Graph API or existing CLI `--section-id` value |
+
+### Verifying the Deployment
+
+```bash
+# Invoke the Lambda manually
+aws lambda invoke --function-name onenote-pipeline-dev /dev/stdout
+
+# Tail the logs
+aws logs tail /aws/lambda/onenote-pipeline-dev --follow
+
+# Check what would change before redeploying
+npx cdk diff --context env=dev
+```
+
+### Environment Differences
+
+| Setting | Dev | Prod |
+|---|---|---|
+| Schedule | Daily | Every 6 hours |
+| Lambda memory | 1024 MB | 2048 MB |
+| Lambda timeout | 10 min | 15 min |
+| Resource removal | DESTROY | RETAIN |
+
 ## Architecture
 
-See [docs/architecture.md](docs/architecture.md) for the AWS deployment architecture with automated sync.
+See [docs/architecture-guide.md](docs/architecture-guide.md) for the component architecture and [docs/aws-architecture.md](docs/aws-architecture.md) for the AWS deployment diagrams.
 
 ## License
 
