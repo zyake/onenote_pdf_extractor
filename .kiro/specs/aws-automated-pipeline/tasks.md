@@ -43,7 +43,7 @@ Migrate the OneNote PDF Extractor from a CLI tool to an AWS Lambda-based automat
 - [x] 3. Checkpoint — Ensure all tests pass
   - Ensure all tests pass, ask the user if questions arise.
 
-- [ ] 4. Implement DeduplicationStore
+- [x] 4. Implement DeduplicationStore
   - [x] 4.1 Create `ExportRecord` record and `DeduplicationStore` class in `com.extractor.dedup`
     - `getExportRecord(pageId)` → `Optional<ExportRecord>`
     - `recordExport(ExportRecord)` → void
@@ -57,7 +57,7 @@ Migrate the OneNote PDF Extractor from a CLI tool to an AWS Lambda-based automat
     - **Property 2: Export record round-trip**
     - **Validates: Requirements 3.2, 3.5**
 
-- [ ] 5. Implement S3PdfStore
+- [x] 5. Implement S3PdfStore
   - [x] 5.1 Create `S3PdfStore` in `com.extractor.storage` with `uploadPdf` and `generateKey` methods
     - Deterministic key format: `{notebook}/{section}/{sanitized_title}.pdf`
     - Reuse `PdfWriter.sanitizeFilename()` logic (extract to shared utility if needed)
@@ -77,11 +77,11 @@ Migrate the OneNote PDF Extractor from a CLI tool to an AWS Lambda-based automat
     - Accept PDF bytes and filename
     - _Requirements: 5.1, 5.3_
 
-- [ ] 7. Implement MetricsPublisher and PipelineReporter
+- [x] 7. Implement MetricsPublisher and PipelineReporter
   - [x] 7.1 Create `MetricsPublisher` in `com.extractor.metrics` that emits CloudWatch metrics
     - Publish: pages exported, skipped, failed, and run duration
     - _Requirements: 7.3_
-  - [ ] 7.2 Create `PipelineReporter` in `com.extractor.report` with `formatSummary` and `formatFailures` methods
+  - [x] 7.2 Create `PipelineReporter` in `com.extractor.report` with `formatSummary` and `formatFailures` methods
     - Summary includes: total, exported, skipped, failed, uploaded to NotebookLM counts
     - Failure details include: pageId, pageTitle, errorMessage for each
     - Log to stdout (CloudWatch Logs captures Lambda stdout)
@@ -99,15 +99,15 @@ Migrate the OneNote PDF Extractor from a CLI tool to an AWS Lambda-based automat
 - [x] 8. Checkpoint — Ensure all tests pass
   - Ensure all tests pass, ask the user if questions arise.
 
-- [ ] 9. Implement PipelineHandler (Lambda orchestrator)
-  - [ ] 9.1 Create `PipelineHandler` in `com.extractor.pipeline` implementing `RequestHandler<ScheduledEvent, PipelineResult>`
+- [x] 9. Implement PipelineHandler (Lambda orchestrator)
+  - [x] 9.1 Create `PipelineHandler` in `com.extractor.pipeline` implementing `RequestHandler<ScheduledEvent, PipelineResult>`
     - Wire all components: CredentialLoader → Auth → GraphClientWrapper → PageLister → DeduplicationStore → PdfDownloader → S3PdfStore → NotebookLmUploader → MetricsPublisher → PipelineReporter
     - Use structured concurrency with virtual threads and configurable semaphore for concurrent page processing
     - Implement fault isolation: individual page failures do not abort the run
     - Log start timestamp and section target at startup
     - Ensure no sensitive values appear in logs
     - _Requirements: 1.4, 3.1, 6.2, 8.1, 8.2, 8.3_
-  - [ ] 9.2 Create `PipelineResult` record in `com.extractor.pipeline`
+  - [x] 9.2 Create `PipelineResult` record in `com.extractor.pipeline`
     - Fields: totalPages, exportedCount, skippedCount, failedCount, uploadedToNotebookLmCount, durationMs, failures
     - _Requirements: 7.1_
   - [ ]* 9.3 Write property test for fault isolation
@@ -123,7 +123,7 @@ Migrate the OneNote PDF Extractor from a CLI tool to an AWS Lambda-based automat
     - **Property 11: NotebookLM upload status recorded**
     - **Validates: Requirements 5.4**
 
-- [ ] 10. Update Maven dependencies and build configuration
+- [x] 10. Update Maven dependencies and build configuration
   - Add AWS SDK v2 dependencies: `dynamodb`, `s3`, `ssm`, `cloudwatch`
   - Add AWS Lambda Java runtime dependency: `aws-lambda-java-core`, `aws-lambda-java-events`
   - Add Google API client dependencies for NotebookLM/Drive API
@@ -133,15 +133,15 @@ Migrate the OneNote PDF Extractor from a CLI tool to an AWS Lambda-based automat
 - [x] 11. Checkpoint — Ensure all tests pass
   - Ensure all tests pass, ask the user if questions arise.
 
-- [ ] 12. Create AWS CDK infrastructure
-  - [ ] 12.1 Create CDK app in `infra/` directory using Python
+- [x] 12. Create AWS CDK infrastructure
+  - [x] 12.1 Create CDK app in `infra/` directory using Python
     - Define stack with: EventBridge scheduled rule, Lambda function (fat JAR), S3 bucket, DynamoDB table, SSM parameters, CloudWatch alarm on failures
     - Configure Lambda with reserved concurrency = 1 to prevent overlapping runs
     - Configure IAM roles with least-privilege: Lambda role gets DynamoDB read/write, S3 put, SSM get-parameter, CloudWatch put-metric-data
     - Support parameterized deployment (dev/prod) via CDK context
     - _Requirements: 1.1, 1.2, 1.3, 9.1, 9.2, 9.3, 9.4_
 
-- [ ] 13. Final checkpoint — Ensure all tests pass
+- [x] 13. Final checkpoint — Ensure all tests pass
   - Ensure all tests pass, ask the user if questions arise.
 
 ## Notes
